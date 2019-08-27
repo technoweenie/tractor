@@ -9,7 +9,8 @@ export class TreeExplorer {
 	explorer: vscode.TreeView<Node>;
 
 	inspectorPanel: vscode.WebviewPanel;
-    client: any;
+	client: any;
+	api: any;
     remoteState: any;
 
     selectedNodeId: any;
@@ -18,43 +19,49 @@ export class TreeExplorer {
 		const treeDataProvider = new NodeProvider(this);
 		this.explorer = vscode.window.createTreeView('treeExplorer', { treeDataProvider });
 		vscode.commands.registerCommand('treeExplorer.inspectNode', (nodeId) => this.inspectNode(nodeId, context));
-		var output = vscode.window.createOutputChannel("tractor");
+		
+		this.api = new qrpc.API();
+		this.api.handle("state", treeDataProvider);
 
-		(async function connectServer() {  
-			try {
-				var conn = await qmux.DialWebsocket("ws://localhost:4243");
-			} catch (e) {
-				setTimeout(() => {
-					connectServer();
-				}, 200);
-				return;
-			}
-			conn.socket.onclose = () => {
-				conn.close();
-				setTimeout(() => {
-					connectServer();
-				}, 200);
-			};
-			var session = new qmux.Session(conn);
-			var api = new qrpc.API();
-			api.handle("state", treeDataProvider);
-			var client = new qrpc.Client(session, api);
-			client.serveAPI();
-			//window.rpc = client;
-			await client.call("subscribe");
-
-		})().catch(async (err) => { 
-			output.appendLine(err.stack);
-		});
-
+		this.connect();
 	}
 
-	public incr() {
+	async connect() {
+		try {
+			var conn = await qmux.DialWebsocket("ws://localhost:4243");
+		} catch (e) {
+			setTimeout(() => {
+				this.connect();
+			}, 200);
+			return;
+		}
+		conn.socket.onclose = () => {
+			conn.close();
+			setTimeout(() => {
+				this.connect();
+			}, 200);
+		};
+		var session = new qmux.Session(conn);
+		this.client = new qrpc.Client(session, this.api);
+		this.client.serveAPI();
+		//window.rpc = client;
+		await this.client.call("subscribe");
+	}
+
+	addNode(name: string) {
+		this.client.call("appendNode", {"ID": "", "Name": name});
+	}
+
+	deleteNode(id: string) {
+		this.client.call("deleteNode", id);
+	}
+
+	incr() {
 		this.client.call("incr");
 		vscode.window.showInformationMessage(`incremented`);
 	}
 
-	private inspectNode(nodeId: any, context: vscode.ExtensionContext): void {
+	inspectNode(nodeId: any, context: vscode.ExtensionContext): void {
         this.selectedNodeId = nodeId;
         const sendState = () => {
             this.inspectorPanel.webview.postMessage({"event": "state", "state": this.remoteState});
@@ -78,8 +85,11 @@ export class TreeExplorer {
                 message => {
                   switch (message.event) {
                     case 'ready':
-                      sendState();
-                      return;
+                      	sendState();
+					  	return;
+					case 'rpc':
+						this.client.call(message.method, message.params);
+						return;
                   }
                 },
                 undefined,

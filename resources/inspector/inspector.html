@@ -32,6 +32,7 @@
     <div id="app"></div>
     <script type="text/babel">
     window.baseUri = "vscode-resource://";
+    window.vscode = acquireVsCodeApi();
 
     class InspectorContainer extends React.Component {
       constructor(props) {
@@ -53,12 +54,11 @@
               break;
           }
         });
-        const vscode = acquireVsCodeApi();
-        vscode.postMessage({event: 'ready'});
+        window.vscode.postMessage({event: 'ready'});
       }
 
       render() {
-        return <Inspector node={this.state.remote.nodes[this.state.nodeId]} />;
+        return <Inspector node={this.state.remote.nodes[this.state.nodeId]} components={this.state.remote.components} />;
       }
     }
 

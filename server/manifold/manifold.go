@@ -342,6 +342,8 @@ func (n *Node) FindID(id string) *Node {
 func (n *Node) RemoveAt(idx int) *Node {
 	node := n.Children[idx]
 	n.Children = append(n.Children[:idx], n.Children[idx+1:]...)
+	// n.Sync()
+	n.notifyObservers(n, node.Name, nil, nil)
 	return node
 }
 
@@ -366,6 +368,8 @@ func (n *Node) Insert(idx int, node *Node) {
 func (n *Node) Append(node *Node) {
 	node.parent = n
 	n.Children = append(n.Children, node)
+	// n.Sync()
+	n.notifyObservers(n, node.Name, nil, nil)
 }
 
 func (n *Node) Component(name string) interface{} {
@@ -381,6 +385,7 @@ func (n *Node) RemoveComponentAt(idx int) interface{} {
 	v := n.Components[idx]
 	n.Components = append(n.Components[:idx], n.Components[idx+1:]...)
 	n.Sync()
+	n.notifyObservers(n, v.Name, nil, nil)
 	return v.Ref
 }
 

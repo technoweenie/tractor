@@ -24,42 +24,33 @@
 				}
 			},
 			{
-				"command": "treeExplorer.addEntry",
-				"title": "Add"
-			},
-			{
-				"command": "treeExplorer.editEntry",
-				"title": "Edit",
+				"command": "treeExplorer.addNode",
+				"title": "Add",
 				"icon": {
-					"light": "resources/icons/light/edit.svg",
-					"dark": "resources/icons/dark/edit.svg"
+					"light": "resources/icons/light/plus-solid.svg",
+					"dark": "resources/icons/dark/plus-solid.svg"
 				}
 			},
 			{
-				"command": "treeExplorer.deleteEntry",
+				"command": "treeExplorer.renameNode",
+				"title": "Rename"
+			},
+			{
+				"command": "treeExplorer.deleteNode",
 				"title": "Delete"
 			}
 		],
 		"menus": {
 			"view/title": [
 				{
-					"command": "treeExplorer.refreshEntry",
+					"command": "treeExplorer.addNode",
 					"when": "view == treeExplorer",
 					"group": "navigation"
-				},
-				{
-					"command": "treeExplorer.addEntry",
-					"when": "view == treeExplorer"
 				}
 			],
 			"view/item/context": [
 				{
-					"command": "treeExplorer.editEntry",
-					"when": "view == treeExplorer && viewItem == node",
-					"group": "inline"
-				},
-				{
-					"command": "treeExplorer.deleteEntry",
+					"command": "treeExplorer.deleteNode",
 					"when": "view == treeExplorer && viewItem == node"
 				}
 			]

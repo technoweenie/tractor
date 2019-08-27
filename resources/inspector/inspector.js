@@ -1,6 +1,6 @@
 const { Column, Checkbox, Input, Message, Delete, Box, Heading, Content, List, Dropdown, Breadcrumb, Button, Icon, Level } = rbx;
 
-function remoteAction(action, args) {
+function remoteAction(action, params) {
     switch (action) {
         case "setValue":
         case "setExpression":
@@ -8,10 +8,10 @@ function remoteAction(action, args) {
         case "removeComponent":
         case "appendComponent":
         case "addDelegate":
-            console.log(action);
-            window.rpc.call(action, args)
+            window.vscode.postMessage({event: 'rpc', method: action, params: params});
+            return;
         default:
-            throw "unknown action";
+            throw "unknown action: "+action;
     }
     
 }
@@ -165,7 +165,7 @@ function ComponentManageMenu(props) {
             <Dropdown.Menu>
                 <Dropdown.Content>
                     <Dropdown.Item onClick={() => { /* TODO */}}>Edit</Dropdown.Item>
-                    <Dropdown.Item onClick={() => remoteAction("removeComponent", props.component.path)}>Delete</Dropdown.Item>
+                    <Dropdown.Item onClick={() => remoteAction("removeComponent", {ID: props.nodeId, Component: props.component.name})}>Delete</Dropdown.Item>
                 </Dropdown.Content>
             </Dropdown.Menu>
         </Dropdown>
@@ -182,7 +182,7 @@ function ComponentInspector(props) {
     };
     return (
         <List.Item as="div">
-            <ComponentManageMenu component={props.component} style={{float: "right"}} />
+            <ComponentManageMenu nodeId={props.nodeId} component={props.component} style={{float: "right"}} />
             <Heading as="div" onClick={() => setOpen(!open)} style={headingStyle}>
                 <Arrow opened={open} />
                 <span>{props.component.name}</span>
@@ -216,8 +216,9 @@ function ComponentButtons(props) {
 function AddComponentButton(props) {
     const [open, setOpen] = React.useState(false);
     const [filterFocus, setFilterFocus] = React.useState(false);
+    const [dropdownUp, setDropdownUp] = React.useState(true);
     
-    const fakeData = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+    // const fakeData = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
     const dropdownRef = React.useRef(null);
     const filterRef = React.useRef(null);
     const onBlur = () => {
@@ -228,17 +229,30 @@ function AddComponentButton(props) {
             setOpen(false);
         }, 200);
     }
-    React.useEffect(() => filterRef.current.focus());
+    React.useEffect(() => {
+        filterRef.current.focus();
+        function checkLocationForDropdownDirection() {
+            setDropdownUp(dropdownRef.current.getClientRects()[0].y > 200);
+        }
+        checkLocationForDropdownDirection();
+        // TODO: cleanup this event listener?
+        document.addEventListener('click', function (event) {
+            checkLocationForDropdownDirection();
+        });
+    })
     function onClicker(component) {
-        return () => remoteAction("appendComponent", component);
+        return () => {
+            remoteAction("appendComponent", {Name: component, ID: props.nodeId});
+            setOpen(false);
+        };
     }
     return (
         <section style={{textAlign: "center", marginBottom: "20px"}}>
-            <Dropdown up managed active={open} onBlur={onBlur} ref={dropdownRef}>
+            <Dropdown up={dropdownUp} managed active={open} onBlur={onBlur} ref={dropdownRef}>
                 <Dropdown.Trigger>
                     <Button onClick={() => setOpen(!open)}>
                         <span>Add Component</span>
-                        <Icon size="small"><i className="fas fa-angle-up"></i></Icon>
+                        <Icon size="small"><i className={"fas fa-angle-"+(dropdownUp?"up":"down")}></i></Icon>
                     </Button>
                 </Dropdown.Trigger>
                 <Dropdown.Menu>
@@ -247,7 +261,7 @@ function AddComponentButton(props) {
                             <Input type="text" size="small" ref={filterRef} />
                         </Dropdown.Item>
                         <Dropdown.Item as="div" style={{maxHeight: "100px", overflowY: "scroll", textAlign: "left"}}>
-                            {fakeData.map((item, idx) =>
+                            {(props.components||[]).map((item, idx) =>
                                 <div key={idx} onClick={onClicker(item)}>{item}</div>
                             )}
                         </Dropdown.Item>
@@ -263,15 +277,18 @@ function Inspector(props) {
     return (
         <section>
             <Breadcrumb style={{marginBottom: "0"}}>
-                <Breadcrumb.Item as="div" style={{color: "white", margin: "5px"}}>Foobar</Breadcrumb.Item>
+                <Breadcrumb.Item as="div" style={{color: "white", margin: "5px"}}>{node.id}</Breadcrumb.Item>
                 <Breadcrumb.Item as="div" style={{color: "white", margin: "5px"}} active>{node.name}</Breadcrumb.Item>
             </Breadcrumb>
             <List>
                 {node.components.map((com, idx) => 
-                    <ComponentInspector component={com} key={"com-"+idx} />
+                    <ComponentInspector component={com} nodeId={props.node.id} key={"com-"+idx} />
                 )}
             </List>
-            <AddComponentButton />
+            {props.node &&
+                <AddComponentButton components={props.components} nodeId={props.node.id} />
+            }
+            
         </section>
     );
 }

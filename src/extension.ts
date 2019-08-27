@@ -6,8 +6,12 @@ import * as path from 'path';
 
 import { TreeExplorer } from './manifold';
 
-export function activate(context: vscode.ExtensionContext) {
+let serverTask = undefined;
 
+export function activate(context: vscode.ExtensionContext) {
+	if (vscode.workspace.workspaceFolders === undefined) {
+		return;
+	}
 	// Samples of `window.registerTreeDataProvider`
 	// const nodeDependenciesProvider = new DepNodeProvider(vscode.workspace.workspaceFolders[0].uri.path);
 	// vscode.window.registerTreeDataProvider('nodeDependencies', nodeDependenciesProvider);
@@ -25,12 +29,29 @@ export function activate(context: vscode.ExtensionContext) {
 	// vscode.commands.registerCommand('extension.openJsonSelection', range => jsonOutlineProvider.select(range));
 
 	var tree = new TreeExplorer(context);
-	vscode.commands.registerCommand('treeExplorer.refreshEntry', () => vscode.window.showInformationMessage(`Refreshed.`));
-	vscode.commands.registerCommand('treeExplorer.addEntry', () => vscode.window.showInformationMessage(`Successfully called add entry.`));
-	vscode.commands.registerCommand('treeExplorer.editEntry', (node: any) => {
-		tree.incr();
+	vscode.commands.registerCommand('treeExplorer.addNode', () => {
+		vscode.window.showInputBox({ placeHolder: 'Enter a node name' })
+			.then(value => {
+				if (value !== null && value !== undefined) {
+					tree.addNode(value);
+				}
+			});
+		
 	});
-	vscode.commands.registerCommand('treeExplorer.deleteEntry', (node: any) => vscode.window.showInformationMessage(`Successfully called delete entry on ${node.label}.`));
+	vscode.commands.registerCommand('treeExplorer.renameNode', (node: any) => {
+		// tree.incr();
+	});
+	vscode.commands.registerCommand('treeExplorer.deleteNode', (node: any) => {
+		tree.deleteNode(node.id);
+	});
 
 	vscode.window.createTerminal("Tractor", path.join(context.extensionPath, 'repl.js'));
+
+	serverTask = vscode.tasks.executeTask(new vscode.Task({ type: 'server', task: 'server' }, "server", "tractor", new vscode.ShellExecution("cd _workspace && go run ./cmd/daemon/daemon.go")));
+}
+
+export function deactivate() {
+	if (serverTask) {
+		serverTask.terminate();
+	}
 }

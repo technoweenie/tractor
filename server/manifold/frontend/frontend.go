@@ -38,6 +38,7 @@ type Component struct {
 
 type Node struct {
 	Name       string      `msgpack:"name"`
+	ID         string      `msgpack:"id"`
 	Active     bool        `msgpack:"active"`
 	Components []Component `msgpack:"components"`
 }
@@ -225,6 +226,7 @@ func exportNodes(s *State, root *manifold.Node) {
 		node := Node{
 			Name:       n.Name,
 			Active:     n.Active,
+			ID:         n.ID,
 			Components: []Component{},
 		}
 		for _, com := range n.Components {
@@ -383,6 +385,7 @@ func ListenAndServe(root *manifold.Node, addr string) error {
 		}
 		n := root.FindID(params.ID)
 		if n == nil {
+			r.Return(fmt.Errorf("unable to find node: %s", params.ID))
 			return
 		}
 		n.RemoveComponent(params.Component)

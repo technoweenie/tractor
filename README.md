@@ -1,6 +1,9 @@
 TODO:
-- run server as background thing
+- rest of inspector actions (values)
+- edit component
 - treeview
-    - add, remove
+    - move up/down
+    - rename
+    - add child
 
 

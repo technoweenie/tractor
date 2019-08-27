@@ -18,35 +18,39 @@ class TreeExplorer {
         const treeDataProvider = new NodeProvider(this);
         this.explorer = vscode.window.createTreeView('treeExplorer', { treeDataProvider });
         vscode.commands.registerCommand('treeExplorer.inspectNode', (nodeId) => this.inspectNode(nodeId, context));
-        var output = vscode.window.createOutputChannel("tractor");
-        (function connectServer() {
-            return __awaiter(this, void 0, void 0, function* () {
-                try {
-                    var conn = yield qmux.DialWebsocket("ws://localhost:4243");
-                }
-                catch (e) {
-                    setTimeout(() => {
-                        connectServer();
-                    }, 200);
-                    return;
-                }
-                conn.socket.onclose = () => {
-                    conn.close();
-                    setTimeout(() => {
-                        connectServer();
-                    }, 200);
-                };
-                var session = new qmux.Session(conn);
-                var api = new qrpc.API();
-                api.handle("state", treeDataProvider);
-                var client = new qrpc.Client(session, api);
-                client.serveAPI();
-                //window.rpc = client;
-                yield client.call("subscribe");
-            });
-        })().catch((err) => __awaiter(this, void 0, void 0, function* () {
-            output.appendLine(err.stack);
-        }));
+        this.api = new qrpc.API();
+        this.api.handle("state", treeDataProvider);
+        this.connect();
+    }
+    connect() {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                var conn = yield qmux.DialWebsocket("ws://localhost:4243");
+            }
+            catch (e) {
+                setTimeout(() => {
+                    this.connect();
+                }, 200);
+                return;
+            }
+            conn.socket.onclose = () => {
+                conn.close();
+                setTimeout(() => {
+                    this.connect();
+                }, 200);
+            };
+            var session = new qmux.Session(conn);
+            this.client = new qrpc.Client(session, this.api);
+            this.client.serveAPI();
+            //window.rpc = client;
+            yield this.client.call("subscribe");
+        });
+    }
+    addNode(name) {
+        this.client.call("appendNode", { "ID": "", "Name": name });
+    }
+    deleteNode(id) {
+        this.client.call("deleteNode", id);
     }
     incr() {
         this.client.call("incr");
@@ -71,6 +75,9 @@ class TreeExplorer {
                 switch (message.event) {
                     case 'ready':
                         sendState();
+                        return;
+                    case 'rpc':
+                        this.client.call(message.method, message.params);
                         return;
                 }
             }, undefined, context.subscriptions);
