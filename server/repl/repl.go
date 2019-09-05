@@ -233,7 +233,7 @@ func FromInterface(v interface{}) (objects.Object, error) {
 func ToInterface(o objects.Object) (res interface{}) {
 	switch o := o.(type) {
 	case *objects.Int:
-		res = o.Value
+		res = int(o.Value)
 	case *objects.String:
 		res = o.Value
 	case *objects.Float:

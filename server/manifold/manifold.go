@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"reflect"
+	"runtime"
 	"strings"
 
 	jsonpointer "github.com/dustin/go-jsonpointer"
@@ -16,20 +17,28 @@ import (
 	"github.com/rs/xid"
 )
 
-var registeredDelegates map[string]reflected.Type
+var (
+	registeredDelegates  map[string]reflected.Type
+	registeredComponents []reflected.Type
+	componentFilepaths   map[string]string
+)
 
 func init() {
 	registeredDelegates = make(map[string]reflected.Type)
+	componentFilepaths = make(map[string]string)
 }
 
 func RegisterDelegate(v interface{}, id string) {
 	registeredDelegates[id] = reflected.ValueOf(v).Type()
 }
 
-var registeredComponents []reflected.Type
-
-func RegisterComponent(v interface{}) {
-	registeredComponents = append(registeredComponents, reflected.ValueOf(v).Type())
+func RegisterComponent(v interface{}, path string) {
+	if path == "" {
+		_, path, _, _ = runtime.Caller(1)
+	}
+	ctype := reflected.ValueOf(v).Type()
+	registeredComponents = append(registeredComponents, ctype)
+	componentFilepaths[ctype.Name()] = path
 }
 
 func RegisteredComponents() []string {
@@ -38,6 +47,10 @@ func RegisteredComponents() []string {
 		names = append(names, typ.Name())
 	}
 	return names
+}
+
+func RegisteredComponentPath(n string) string {
+	return componentFilepaths[n]
 }
 
 func RegisteredDelegates() []string {
@@ -337,6 +350,39 @@ func (n *Node) FindID(id string) *Node {
 		}
 	}
 	return nil
+}
+
+func (n *Node) SiblingIndex() int {
+	if n.parent == nil {
+		return 0
+	}
+	for idx, child := range n.parent.Children {
+		if child == n {
+			return idx
+		}
+	}
+	return 0
+}
+
+func (n *Node) SetSiblingIndex(idx int) {
+	if n.parent == nil {
+		return
+	}
+	if idx < 0 {
+		return
+	}
+	if idx >= len(n.parent.Children) {
+		return
+	}
+	oldIndex := n.SiblingIndex()
+	oldChildren := n.parent.Children
+	oldChildren = append(oldChildren[:oldIndex], oldChildren[oldIndex+1:]...)
+	newChildren := make([]*Node, idx+1)
+	copy(newChildren, oldChildren[:idx])
+	newChildren[idx] = n
+	newChildren = append(newChildren, oldChildren[idx:]...)
+	n.parent.Children = newChildren
+	n.parent.notifyObservers(n.parent, n.Name, nil, nil) // is this right?
 }
 
 func (n *Node) RemoveAt(idx int) *Node {

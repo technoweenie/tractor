@@ -48,12 +48,27 @@ export class TreeExplorer {
 		await this.client.call("subscribe");
 	}
 
-	addNode(name: string) {
-		this.client.call("appendNode", {"ID": "", "Name": name});
+	addNode(name: string, parentId?: string) {
+		this.client.call("appendNode", {"ID": parentId||"", "Name": name});
+	}
+
+	updateNode(id: string, name: string, active?: boolean) {
+		let params = {
+			"ID": id,
+			"Name": name
+		};
+		if (active !== undefined) {
+			params["Active"] = active;
+		}
+		this.client.call("updateNode", params);
 	}
 
 	deleteNode(id: string) {
 		this.client.call("deleteNode", id);
+	}
+
+	moveNode(id: string, index: number) {
+		this.client.call("moveNode", {"ID": id, "Index": index});
 	}
 
 	incr() {
@@ -89,6 +104,17 @@ export class TreeExplorer {
 					  	return;
 					case 'rpc':
 						this.client.call(message.method, message.params);
+						return;
+					case 'edit':
+						if (message.params.Component === "Delegate") {
+							vscode.window.showTextDocument(vscode.Uri.file(path.join(vscode.workspace.workspaceFolders[0].uri.path, '_workspace', 'delegates', message.params.ID, 'delegate.go')), {
+								viewColumn: vscode.ViewColumn.Two
+							});
+						} else {
+							vscode.window.showTextDocument(vscode.Uri.file(this.remoteState.componentPaths[message.params.Component]), {
+								viewColumn: vscode.ViewColumn.Two
+							});
+						}
 						return;
                   }
                 },
@@ -154,7 +180,7 @@ export class NodeProvider implements vscode.TreeDataProvider<Node> {
                 if (this.explorer.remoteState.hierarchy.filter((p) => p.startsWith(obj.path+"/")).length > 0) {
                     collapse = vscode.TreeItemCollapsibleState.Collapsed;
                 }
-                return new Node(n.name, obj.path, obj.id, collapse, { command: 'treeExplorer.inspectNode', title: "Inspect", arguments: [obj.id], });
+                return new Node(n.name, obj.path, obj.id, n.index, collapse, { command: 'treeExplorer.inspectNode', title: "Inspect", arguments: [obj.id], });
             }));
 		} else {
 			let rootPaths = this.explorer.remoteState.hierarchy.filter((p) => {
@@ -168,7 +194,7 @@ export class NodeProvider implements vscode.TreeDataProvider<Node> {
                 if (this.explorer.remoteState.hierarchy.filter((p) => p.startsWith(obj.path+"/")).length > 0) {
                     collapse = vscode.TreeItemCollapsibleState.Collapsed;
                 }
-                return new Node(n.name, obj.path, obj.id, collapse, { command: 'treeExplorer.inspectNode', title: "Inspect", arguments: [obj.id], });
+                return new Node(n.name, obj.path, obj.id, n.index, collapse, { command: 'treeExplorer.inspectNode', title: "Inspect", arguments: [obj.id], });
             }));
 		}
 
@@ -182,6 +208,7 @@ export class Node extends vscode.TreeItem {
         public readonly label: string,
         public readonly abspath: string,
 		public readonly id: string,
+		public readonly index: number,
 		public readonly collapsibleState: vscode.TreeItemCollapsibleState,
 		public readonly command?: vscode.Command
 	) {
@@ -193,7 +220,7 @@ export class Node extends vscode.TreeItem {
 	}
 
 	// get description(): string {
-	// 	return this.label;
+	// 	return "$(alert)";
 	// }
 
 	iconPath = {

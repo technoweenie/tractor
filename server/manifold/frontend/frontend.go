@@ -3,7 +3,6 @@ package frontend
 import (
 	"fmt"
 	"log"
-	"os"
 	"reflect"
 	"strconv"
 
@@ -38,7 +37,9 @@ type Component struct {
 
 type Node struct {
 	Name       string      `msgpack:"name"`
+	Path       string      `msgpack:"path"`
 	ID         string      `msgpack:"id"`
+	Index      int         `msgpack:"index"`
 	Active     bool        `msgpack:"active"`
 	Components []Component `msgpack:"components"`
 }
@@ -52,6 +53,7 @@ type State struct {
 	Projects       []Project         `msgpack:"projects"`
 	CurrentProject string            `msgpack:"currentProject"`
 	Components     []string          `msgpack:"components"`
+	ComponentPaths map[string]string `msgpack:"componentPaths"`
 	Hierarchy      []string          `msgpack:"hierarchy"`
 	Nodes          map[string]Node   `msgpack:"nodes"`
 	NodePaths      map[string]string `msgpack:"nodePaths"`
@@ -226,6 +228,8 @@ func exportNodes(s *State, root *manifold.Node) {
 		node := Node{
 			Name:       n.Name,
 			Active:     n.Active,
+			Path:       n.FullPath(),
+			Index:      n.SiblingIndex(),
 			ID:         n.ID,
 			Components: []Component{},
 		}
@@ -296,6 +300,11 @@ type DelegateParams struct {
 	Contents string
 }
 
+type MoveNodeParams struct {
+	ID    string
+	Index int
+}
+
 func ListenAndServe(root *manifold.Node, addr string) error {
 	state := State{
 		Projects: []Project{
@@ -306,6 +315,10 @@ func ListenAndServe(root *manifold.Node, addr string) error {
 		Components:     manifold.RegisteredComponents(),
 		Nodes:          make(map[string]Node),
 		NodePaths:      make(map[string]string),
+		ComponentPaths: make(map[string]string),
+	}
+	for _, name := range state.Components {
+		state.ComponentPaths[name] = manifold.RegisteredComponentPath(name)
 	}
 	exportNodes(&state, root)
 
@@ -321,11 +334,6 @@ func ListenAndServe(root *manifold.Node, addr string) error {
 		}
 	}
 
-	// repl
-	repl := repl.NewREPL(func(v interface{}) {
-		fmt.Fprintf(os.Stdout, "%s\n", v)
-	})
-
 	// define api
 	api := qrpc.NewAPI()
 	api.HandleFunc("reload", func(r qrpc.Responder, c *qrpc.Call) {
@@ -336,46 +344,49 @@ func ListenAndServe(root *manifold.Node, addr string) error {
 	api.HandleFunc("repl", func(r qrpc.Responder, c *qrpc.Call) {
 		var params DelegateParams
 		_ = c.Decode(&params)
-		// ^^ hmmm
+		// ^^ TODO: make sure this isn't necessary before hijacking
 		ch, err := r.Hijack(nil)
 		if err != nil {
 			log.Println(err)
 		}
+		repl := repl.NewREPL(func(v interface{}) {
+			fmt.Fprintf(ch, "%s\n", v)
+		})
 		repl.Run(ch, ch, map[string]interface{}{
 			"Root": root,
 		})
 	})
-	api.HandleFunc("readDelegate", func(r qrpc.Responder, c *qrpc.Call) {
-		var params DelegateParams
-		err := c.Decode(&params)
-		if err != nil {
-			r.Return(err)
-			return
-		}
-		src, err := workspace.DelegateSource(params.ID)
-		if err != nil {
-			r.Return(err)
-			return
-		}
-		params.Contents = string(src)
+	// api.HandleFunc("readDelegate", func(r qrpc.Responder, c *qrpc.Call) {
+	// 	var params DelegateParams
+	// 	err := c.Decode(&params)
+	// 	if err != nil {
+	// 		r.Return(err)
+	// 		return
+	// 	}
+	// 	src, err := workspace.DelegateSource(params.ID)
+	// 	if err != nil {
+	// 		r.Return(err)
+	// 		return
+	// 	}
+	// 	params.Contents = string(src)
 
-		r.Return(params)
-	})
-	api.HandleFunc("writeDelegate", func(r qrpc.Responder, c *qrpc.Call) {
-		var params DelegateParams
-		err := c.Decode(&params)
-		if err != nil {
-			r.Return(err)
-			return
-		}
-		err = workspace.WriteDelegate(params.ID, []byte(params.Contents))
-		if err != nil {
-			r.Return(err)
-			return
-		}
+	// 	r.Return(params)
+	// })
+	// api.HandleFunc("writeDelegate", func(r qrpc.Responder, c *qrpc.Call) {
+	// 	var params DelegateParams
+	// 	err := c.Decode(&params)
+	// 	if err != nil {
+	// 		r.Return(err)
+	// 		return
+	// 	}
+	// 	err = workspace.WriteDelegate(params.ID, []byte(params.Contents))
+	// 	if err != nil {
+	// 		r.Return(err)
+	// 		return
+	// 	}
 
-		r.Return(nil)
-	})
+	// 	r.Return(nil)
+	// })
 	api.HandleFunc("removeComponent", func(r qrpc.Responder, c *qrpc.Call) {
 		var params RemoveComponentParams
 		err := c.Decode(&params)
@@ -540,6 +551,23 @@ func ListenAndServe(root *manifold.Node, addr string) error {
 		n := manifold.NewNode(params.Name)
 		p.Append(n)
 		n.Sync()
+		exportNodes(&state, root)
+		sendState()
+		r.Return(nil)
+	})
+	api.HandleFunc("moveNode", func(r qrpc.Responder, c *qrpc.Call) {
+		var params MoveNodeParams
+		err := c.Decode(&params)
+		if err != nil {
+			r.Return(err)
+			return
+		}
+		n := root.FindID(params.ID)
+		if n == nil {
+			return
+		}
+		n.SetSiblingIndex(params.Index)
+		// n.Sync()
 		exportNodes(&state, root)
 		sendState()
 		r.Return(nil)

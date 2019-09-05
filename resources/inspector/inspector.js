@@ -10,6 +10,9 @@ function remoteAction(action, params) {
         case "addDelegate":
             window.vscode.postMessage({event: 'rpc', method: action, params: params});
             return;
+        case "editComponent":
+            window.vscode.postMessage({event: 'edit', params: params});
+            return;
         default:
             throw "unknown action: "+action;
     }
@@ -23,22 +26,21 @@ function FieldControl(props) {
     function typedControl() {
         if (exprMode) {
             onChange = (event) => remoteAction("setExpression", { "Path": props.path, "Value": event.target.value });
-            return <Input type="text" size="small" style={{ height: "22px", color: "white", backgroundColor: "#555", fontFamily: "monospace" }} onChange={onChange} value={props.expression} />
+            return <Input type="text" size="small" style={{ height: "22px", color: "white", backgroundColor: "#555", fontFamily: "monospace" }} onChange={onChange} value={props.expression||""} />
         }
         switch (props.type) {
             case "string":
                 return <Input type="text" readOnly={readOnly} size="small" onChange={onChange} value={props.value} />
             case "boolean":
-                onChange = (event) => remoteAction("setValue", { "Path": this.props.path, "Value": event.target.checked });
+                onChange = (event) => remoteAction("setValue", { "Path": props.path, "Value": event.target.checked });
                 return <Checkbox onChange={onChange} readOnly={readOnly} checked={props.value} />
-            
             case "number":
-                onChange = (val) => remoteAction("setValue", { "Path": this.props.path, "IntValue": val });
+                onChange = (event) => remoteAction("setValue", { "Path": props.path, "IntValue": event.target.valueAsNumber });
                 return <Input type="number" readOnly={readOnly} style={{ width: "100%" }} size="small" onChange={onChange} value={props.value} />
             default:
                 if (props.type.startsWith("reference:")) {
                     var refType = props.type.split(":")[1];
-                    onChange = (val, label, extra) => window.rpc.call("setValue", { "Path": this.props.path, "RefValue": val + "/" + refType });
+                    onChange = (val, label, extra) => window.rpc.call("setValue", { "Path": props.path, "RefValue": val + "/" + refType });
                     const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
                     // TODO: finish me
                     return <Autocomplete data={data} value={props.value} />;
@@ -158,13 +160,13 @@ function ComponentFields(props) {
 
 function ComponentManageMenu(props) {
     return (
-        <Dropdown align="right" {...props}>
+        <Dropdown align="right" style={props.style}>
             <Dropdown.Trigger>
                 <Icon size="small"><i className="fas fa-cog"></i></Icon>
             </Dropdown.Trigger>
             <Dropdown.Menu>
                 <Dropdown.Content>
-                    <Dropdown.Item onClick={() => { /* TODO */}}>Edit</Dropdown.Item>
+                    <Dropdown.Item onClick={() => remoteAction("editComponent", {ID: props.nodeId, Component: props.component.name})}>Edit</Dropdown.Item>
                     <Dropdown.Item onClick={() => remoteAction("removeComponent", {ID: props.nodeId, Component: props.component.name})}>Delete</Dropdown.Item>
                 </Dropdown.Content>
             </Dropdown.Menu>
@@ -180,17 +182,32 @@ function ComponentInspector(props) {
         overflow: "auto", 
         paddingBottom: open ? "15px" : "0"
     };
+    let heading = "Delegate"
+    if (props.component !== undefined) {
+        heading = props.component.name;
+    }
     return (
         <List.Item as="div">
-            <ComponentManageMenu nodeId={props.nodeId} component={props.component} style={{float: "right"}} />
+            {props.component &&
+                <ComponentManageMenu nodeId={props.nodeId} component={props.component} style={{float: "right"}} />
+            }
             <Heading as="div" onClick={() => setOpen(!open)} style={headingStyle}>
                 <Arrow opened={open} />
-                <span>{props.component.name}</span>
+                <span>{heading}</span>
             </Heading>
             {open &&
                 <Content>
-                    <ComponentFields fields={props.component.fields} />
-                    <ComponentButtons buttons={props.component.buttons} />
+                    {props.delegate &&
+                        <Button size="small" onClick={() => remoteAction("addDelegate", {ID: props.nodeId})}>
+                            Add Delegate
+                        </Button>
+                    }
+                    {props.component &&
+                        <React.Fragment>
+                            <ComponentFields fields={props.component.fields} />
+                            <ComponentButtons buttons={props.component.buttons} />
+                        </React.Fragment>
+                    }
                 </Content>
             }
         </List.Item>
@@ -215,7 +232,6 @@ function ComponentButtons(props) {
 
 function AddComponentButton(props) {
     const [open, setOpen] = React.useState(false);
-    const [filterFocus, setFilterFocus] = React.useState(false);
     const [dropdownUp, setDropdownUp] = React.useState(true);
     
     // const fakeData = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
@@ -274,13 +290,25 @@ function AddComponentButton(props) {
 
 function Inspector(props) {
     const node = props.node || {name: "no node", components: []};
+    const delegatePlaceholder = (props.node && (node.components.length === 0 || node.components[0].name !== "Delegate"));
+    let ancestors = [];
+    if (node.path) {
+        ancestors = node.path.split("/");
+        ancestors.shift(); // drop empty first element
+        ancestors.pop(); // drop last name element
+    }
     return (
         <section>
             <Breadcrumb style={{marginBottom: "0"}}>
-                <Breadcrumb.Item as="div" style={{color: "white", margin: "5px"}}>{node.id}</Breadcrumb.Item>
-                <Breadcrumb.Item as="div" style={{color: "white", margin: "5px"}} active>{node.name}</Breadcrumb.Item>
+                {ancestors.map((name, idx) => 
+                    <Breadcrumb.Item key={"path-"+idx} as="div" style={{color: "white", margin: "5px"}}>{name}</Breadcrumb.Item>
+                )}
+                <Breadcrumb.Item key="name" as="div" style={{color: "white", margin: "5px"}} active>{node.name}</Breadcrumb.Item>
             </Breadcrumb>
             <List>
+                {delegatePlaceholder &&
+                    <ComponentInspector delegate key="-1" nodeId={props.node.id} />
+                }
                 {node.components.map((com, idx) => 
                     <ComponentInspector component={com} nodeId={props.node.id} key={"com-"+idx} />
                 )}

@@ -1,0 +1,237 @@
+<!doctype html>
+<html>
+    <head>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jsPlumb/2.11.2/css/jsplumbtoolkit-defaults.min.css" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jsPlumb/2.11.2/js/jsplumb.min.js"></script>
+        <script
+            src="https://code.jquery.com/jquery-3.4.1.min.js"
+            integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="
+            crossorigin="anonymous"></script>
+    </head>   
+    <style>
+        body {
+            font-family: sans-serif;
+            color: lightgray;
+            margin: 0;
+        }
+        main {
+            background-size: 40px 40px;
+            background-color:#2a2a2c;
+            background-image: linear-gradient(to right, #202020 1px, transparent 1px), linear-gradient(to bottom, #202020 1px, transparent 1px);
+
+            position:fixed;
+            padding:0;
+            margin:0;
+
+            top:0;
+            left:0;
+
+            width: 500%;
+            height: 500%;
+        }
+        .node {
+            width: 160px;
+            position:absolute;
+            filter: drop-shadow(3px 3px 10px #111);
+        }
+        .header-endpoint {
+            transform: rotate(45deg);
+            width: 20px !important;
+            height: 20px !important;
+            margin-left: -11px;
+            margin-top: -11px;
+            background: #4171a9 !important;
+            border-radius: 0 4px 0 4px;
+        }
+        .header-endpoint:before {
+            content: "";
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background-image: url(vscode-resource:///graphview/arrow-right-bold.png);
+            background-size: 20px 20px;
+            background-repeat: no-repeat;
+            background-position: -6px; 
+            margin-top: 4px;
+            margin-left: 4px;
+            transform: rotate(-45deg);
+        }
+        .header-endpoint img {
+            transform: rotate(-45deg);
+        }
+        .header {
+            background-color: #4171a9;
+            height: 40px;
+            border-radius: 6px 6px 0 0;
+            color: white;
+            text-align: center;
+        }
+        .header .title {
+            padding-top: 0.5rem;
+            font-size: 1.25rem;
+            font-family: sans-serif;
+        }
+        .body {
+            background-color: #3e4249;
+            height: 80px;
+            border-radius: 0 0 6px 6px;
+        }
+        .jtk-connector {
+            z-index: -10;
+        }
+        .output-label {
+            transform: translate(-90%, -50%) !important;
+        }
+        .input-label {
+            transform: translate(0%, -50%) !important;
+        }
+
+    </style>
+    <body>
+        <main></main>
+        <script type="text/javascript">
+        window.setZoom = function(zoom, instance, transformOrigin, el) {
+            transformOrigin = transformOrigin || [ 0.5, 0.5 ];
+            instance = instance || jsPlumb;
+            el = el || instance.getContainer();
+            var p = [ "webkit", "moz", "ms", "o" ],
+                s = "scale(" + zoom + ")",
+                oString = (transformOrigin[0] * 100) + "% " + (transformOrigin[1] * 100) + "%";
+
+            for (var i = 0; i < p.length; i++) {
+                el.style[p[i] + "Transform"] = s;
+                el.style[p[i] + "TransformOrigin"] = oString;
+            }
+
+            el.style["transform"] = s;
+            el.style["transformOrigin"] = oString;
+
+            instance.setZoom(zoom);    
+        };
+        jsPlumb.ready(function() {
+            
+            let scale = 0.5;
+            const el = document.querySelector('main');
+            document.onwheel = (event) => {
+                event.preventDefault();
+
+                scale += event.deltaY * -0.01;
+                scale = Math.min(Math.max(.125, scale), 4);
+
+                // Apply scale transform
+                // el.style.transform = `scale(${scale})`;
+                window.setZoom(scale, jsPlumb, [0, 0], el);
+                
+            };
+            window.setZoom(scale, jsPlumb, [0, 0], el);
+
+            addNode("one", 40*4, 40*9, "one", true, true, ["a", "b"], ["out"]);
+            addNode("two", 40*18, 40*3, "two", true, true, ["a", "b"], ["out"]);
+            addNode("three", 40*18, 40*11, "three", true, true, ["a", "b"], ["out"]);
+            addNode("four", 40*2, 40*2, "four", true, true, ["a", "b"], ["out"]);
+            
+            let headerConnection = {
+                endpoint:[ "Blank", { }],
+                connector:[ "Flowchart", {  } ],
+                paintStyle:{ stroke:"white", strokeWidth:10 },
+                overlays: [
+                    [ "Arrow", { foldback:0.8, width:35 } ]
+                ]
+            }
+
+            let bodyConnection = {
+                endpoint:[ "Dot", { radius: 8}],
+                endpointStyle: {fill: "gray"},
+                paintStyle:{ stroke:"gray", strokeWidth:8 },
+                connector:[ "Bezier", { 
+                    curviness:100 ,
+                } ]
+            }
+
+            // TODO: put connections into defaults of two jsPlumb instances
+
+            jsPlumb.connect({
+                source:"one-header",
+                target:"two-header",
+                anchors: ["Right", "Left"]
+            }, headerConnection);
+            jsPlumb.connect({
+                source:"two-header",
+                target:"three-header",
+                anchors: ["Right", "Left"]
+            }, headerConnection);
+            jsPlumb.connect({
+                source:"four-header",
+                target:"one-header",
+                anchors: ["Right", "Left"]
+            }, headerConnection);
+
+
+            jsPlumb.connect({
+                source:"four-body",
+                target:"two-body",
+                anchors: [[1, 0.25], [0, 0.75]]
+            }, bodyConnection);
+        });
+       
+        function addNode(element, x, y, name, inflow, outflow, inputs, outputs) {
+            $("main").append(
+                $("<div />", {class: "node", id: element, style: `left: ${x}px; top: ${y}px;`}).append(
+                    $("<div />", {class: "header", id: element+"-header"}).append(
+                        $("<div />", {class: "title"}).text(name)
+                    )
+                ).append(
+                    $("<div />", {class: "body", id: element+"-body", style: `height: ${inputs.length*40}px`})
+                )
+            );
+            jsPlumb.draggable(element,{
+                grid: [40,40]
+            });
+            if (inflow) {
+                jsPlumb.addEndpoint(element+"-header", {
+                    endpoint:"Blank",
+                    cssClass: "header-endpoint",
+                    src: "./arrow-right-bold.png",
+                    anchor:[0, 0.5, -1, 0, 1, 0],
+                    paintStyle:{ fill: "#2a2a2c", stroke:"#3e4249", strokeWidth:8 },
+                });
+            }
+            if (outflow) {
+                jsPlumb.addEndpoint(element+"-header", {
+                    endpoint:"Blank",
+                    cssClass: "header-endpoint",
+                    src: "./arrow-right-bold.png",
+                    anchor:[1, 0.5, -1, 0],
+                    paintStyle:{ fill: "#2a2a2c", stroke:"#3e4249", strokeWidth:8 },
+                });
+            }
+            inputs.forEach((val,idx) => {
+                jsPlumb.addEndpoint(element+"-body", {
+                    endpoint:"Dot",
+                    isTarget: true,
+                    anchor:[0, 1/inputs.length*idx, -1, 0, 0, 20],
+                    paintStyle:{ fill: "#2a2a2c", stroke:"#3e4249", strokeWidth:8 },
+                    overlays:[ 
+                        [ "Label", { label:val, location: [1,0.5], id:"myLabel", cssClass: "input-label" } ]
+                    ],
+                });
+            });
+            outputs.forEach((val,idx) => {
+                jsPlumb.addEndpoint(element+"-body", {
+                    endpoint:"Dot",
+                    isSource: true,
+                    anchor:[1, 1/inputs.length*idx, 1, 0, 0, 20],
+                    paintStyle:{ fill: "#2a2a2c", stroke:"#3e4249", strokeWidth:8 },
+                    overlays:[ 
+                        [ "Label", { label:val, location: [0,0.5], id:"myLabel", cssClass: "output-label" } ]
+                    ],
+                });
+            });
+            
+        }
+
+        jsPlumb.setContainer(document.querySelector("main"));
+        
+        </script>
+    </body>
+</html>

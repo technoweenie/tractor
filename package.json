@@ -16,6 +16,10 @@
 	"contributes": {
 		"commands": [
 			{
+				"command": "graphview.open",
+				"title": "Open GraphView"
+			},
+			{
 				"command": "treeExplorer.refreshEntry",
 				"title": "Refresh",
 				"icon": {
@@ -32,12 +36,28 @@
 				}
 			},
 			{
+				"command": "treeExplorer.deleteNode",
+				"title": "Delete"
+			},
+			{
+				"command": "treeExplorer.moveNodeUp",
+				"title": "Move Up"
+			},
+			{
+				"command": "treeExplorer.moveNodeDown",
+				"title": "Move Down"
+			},
+			{
 				"command": "treeExplorer.renameNode",
 				"title": "Rename"
 			},
 			{
-				"command": "treeExplorer.deleteNode",
-				"title": "Delete"
+				"command": "treeExplorer.addChild",
+				"title": "Add Node..."
+			},
+			{
+				"command": "treeExplorer.placeholder",
+				"title": "Placeholder"
 			}
 		],
 		"menus": {
@@ -49,6 +69,22 @@
 				}
 			],
 			"view/item/context": [
+				{
+					"command": "treeExplorer.addChild",
+					"when": "view == treeExplorer && viewItem == node"
+				},
+				{
+					"command": "treeExplorer.renameNode",
+					"when": "view == treeExplorer && viewItem == node"
+				},
+				{
+					"command": "treeExplorer.moveNodeUp",
+					"when": "view == treeExplorer && viewItem == node"
+				},
+				{
+					"command": "treeExplorer.moveNodeDown",
+					"when": "view == treeExplorer && viewItem == node"
+				},
 				{
 					"command": "treeExplorer.deleteNode",
 					"when": "view == treeExplorer && viewItem == node"

@@ -159,7 +159,7 @@ type Delegate struct{}
 	var imports []string
 	ids := append(manifold.RegisteredDelegates(), node.ID)
 	for _, id := range ids {
-		imports = append(imports, fmt.Sprintf(` _ "./delegates/%s"`, id))
+		imports = append(imports, fmt.Sprintf(` _ "./%s"`, id))
 	}
 	delegates := fmt.Sprintf(`package delegates
 import (
