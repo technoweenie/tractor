@@ -69,11 +69,14 @@
     window.vscode = acquireVsCodeApi();
 
     class InspectorContainer extends React.Component {
+      instance = null;
+
       constructor(props) {
         super(props);
         this.state = {
           remote: {
-            nodes: {}
+            nodes: {},
+            nodePaths: {}
           },
           nodeId: undefined
         };
@@ -82,6 +85,7 @@
           switch (msg['event']) {
             case "state":
               this.setState({"remote": msg.state});
+              console.log(msg.state);
               break;
             case "select":
               this.setState({"nodeId": msg.nodeId})
@@ -89,6 +93,17 @@
           }
         });
         window.vscode.postMessage({event: 'ready'});
+      }
+
+      componentDidMount() {
+        InspectorContainer.instance = this;
+      }
+
+      selectedNode() {
+        if (this.state.nodeId === undefined) {
+          return;
+        }
+        return this.state.remote.nodes[this.state.nodeId];
       }
 
       render() {

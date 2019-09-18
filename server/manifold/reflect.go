@@ -70,7 +70,11 @@ OUTER:
 		}
 	}
 
-	val.Set(reflect.ValueOf(value))
+	if value == nil {
+		val.Set(reflect.Zero(val.Type()))
+	} else {
+		val.Set(reflect.ValueOf(value))
+	}
 	return
 }
 

@@ -3,8 +3,10 @@ package workspace
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path"
+	"reflect"
 	"strings"
 
 	"github.com/manifold/tractor/server/manifold"
@@ -98,13 +100,32 @@ func LoadHierarchy() (*manifold.Node, error) {
 	if ok, err := afero.Exists(fs, "node.json"); !ok || err != nil {
 		return NewHierarchy(), nil
 	}
-	return loadNode(dir, fs)
+	manifold.DeflatedRefs = []manifold.DeflatedRef{}
+	n, err := loadNode(dir, fs)
+	if err != nil {
+		return nil, err
+	}
+	for _, ref := range manifold.DeflatedRefs {
+		src := n.FindID(ref.NodeID)
+		if src == nil {
+			log.Printf("no node found for deflated ref at %s", ref.NodeID)
+			continue
+		}
+		dst := n.FindID(ref.TargetID)
+		if dst == nil {
+			log.Printf("no node found for deflated ref target at %s", ref.TargetID)
+			continue
+		}
+		ptr := reflect.New(ref.TargetType)
+		dst.Registry.ValueTo(ptr)
+		src.SetValue(ref.Path, reflect.Indirect(ptr).Interface())
+	}
+	return n, nil
 }
 
 func NewHierarchy() *manifold.Node {
 	n := manifold.NewNode("")
-	n.Append(manifold.NewNode("NodeA"))
-	n.Append(manifold.NewNode("NodeB"))
+	n.Append(manifold.NewNode("System"))
 	return n
 }
 

@@ -4,15 +4,17 @@ TODO:
 - expressions?
 - components: auth, cron, etc
 - digital ocean / terraform example
-- inspector renderer ... virtual components
+- inspector renderer ... 
+
+- virtual components (get, set, fields, call)
 
 - spreadsheet ideas
 
-- agent
-  - extension start daemon command
-  - rpc call to agent to "connect" (start and show logs, or just show logs)
-    - run locally if unable?
-  - rpc call to start/stop
-  - listen on unix socket if specified
-  - show status based on sockets directory
-  - process manager + shutdown
+- !project twitch command
+- adding component doesn't trigger save
+- removing component should have a hook
+- new components won't get added to global registry
+- registry will populate field with children components
+
+added ValueTo to registry,
+now use it to get a value out of the registry of a particular type

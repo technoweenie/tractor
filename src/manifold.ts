@@ -106,8 +106,14 @@ export class TreeExplorer {
 						this.client.call(message.method, message.params);
 						return;
 					case 'edit':
+						if (message.Filepath !== undefined) {
+							vscode.window.showTextDocument(vscode.Uri.file(message.Filepath), {
+								viewColumn: vscode.ViewColumn.Two
+							});
+							return;
+						}
 						if (message.params.Component === "Delegate") {
-							vscode.window.showTextDocument(vscode.Uri.file(path.join(vscode.workspace.workspaceFolders[0].uri.path, '_workspace', 'delegates', message.params.ID, 'delegate.go')), {
+							vscode.window.showTextDocument(vscode.Uri.file(path.join(vscode.workspace.workspaceFolders[0].uri.path, 'delegates', message.params.ID, 'delegate.go')), {
 								viewColumn: vscode.ViewColumn.Two
 							});
 						} else {

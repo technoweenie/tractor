@@ -177,7 +177,7 @@ func TestObserver(t *testing.T) {
 	ch := make(chan bool, 1)
 	n.Observe(&NodeObserver{
 		Path: "DemoComponent/StringValue",
-		OnChange: func(old, new interface{}, path string) {
+		OnChange: func(node *Node, path string, old, new interface{}) {
 			ch <- true
 		},
 	})

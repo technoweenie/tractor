@@ -1,4 +1,4 @@
-const { Column, Checkbox, Input, Message, Delete, Box, Heading, Content, List, Dropdown, Breadcrumb, Button, Icon, Level } = rbx;
+const { Column, Control, Checkbox, Input, Message, Delete, Box, Heading, Content, List, Dropdown, Breadcrumb, Button, Icon, Level } = rbx;
 
 function remoteAction(action, params) {
     switch (action) {
@@ -8,6 +8,7 @@ function remoteAction(action, params) {
         case "removeComponent":
         case "appendComponent":
         case "addDelegate":
+            console.log(action, params);
             window.vscode.postMessage({event: 'rpc', method: action, params: params});
             return;
         case "editComponent":
@@ -40,10 +41,9 @@ function FieldControl(props) {
             default:
                 if (props.type.startsWith("reference:")) {
                     var refType = props.type.split(":")[1];
-                    onChange = (val, label, extra) => window.rpc.call("setValue", { "Path": props.path, "RefValue": val + "/" + refType });
-                    const data = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
-                    // TODO: finish me
-                    return <Autocomplete data={data} value={props.value} />;
+                    let onSet = (path) => remoteAction("setValue", { "Path": props.path, "RefValue": path + "/" + refType });
+                    let onUnset = (path) => remoteAction("setValue", { "Path": props.path, "Value": null });
+                    return <Reference value={props.value} type={refType} onSet={onSet} onUnset={onUnset} />;
                 } else {
                     return "???";
                 }
@@ -220,7 +220,7 @@ function ComponentButtons(props) {
         if (button.onclick !== "") {
             return (event) => eval(button.onclick); 
         } else {
-            return (event) => remoteAction("callMethod", event.target.value);
+            return (event) => remoteAction("callMethod", button.path);
         }
     }
     return (props.buttons||[]).map((button, idx) =>
@@ -230,11 +230,61 @@ function ComponentButtons(props) {
     );
 }
 
+function Reference(props) {
+    const [open, setOpen] = React.useState(false);
+    const dropdownRef = React.useRef(null);
+    const filterRef = React.useRef(null);
+    const onBlur = () => {
+        setTimeout(() => {
+            if (dropdownRef.current.contains(document.activeElement)) {
+                return;
+            }
+            setOpen(false);
+        }, 200);
+    }
+    React.useEffect(() => {
+        filterRef.current.focus();
+    })
+    function onClicker(entry) {
+        return () => {
+            props.onSet(entry[0]);
+            setOpen(false);
+        };
+    }
+    let nodes = [];
+    for (const entry of Object.entries(InspectorContainer.instance.state.remote.nodePaths)) {
+        nodes.push(entry);
+    }
+    return (
+        <Dropdown style={{display: "block"}} managed active={open} onBlur={onBlur} ref={dropdownRef}>
+            <Dropdown.Trigger>
+                <Control iconRight>
+                    <Input type="text" onClick={() => setOpen(!open)} readOnly size="small" value={props.value} title={props.type} />
+                    <Icon align="right" onClick={() => props.onUnset()}>
+                        <Delete size="small" />
+                    </Icon>
+                </Control>
+            </Dropdown.Trigger>
+            <Dropdown.Menu>
+            <Dropdown.Content>
+                <Dropdown.Item as="div">
+                    <Input type="text" size="small" ref={filterRef} />
+                </Dropdown.Item>
+                <Dropdown.Divider />
+                <Dropdown.Item as="div" style={{maxHeight: "100px", overflowY: "scroll", textAlign: "left"}}>
+                    {nodes.map((node, idx) => 
+                        <div key={idx} onClick={onClicker(node)}>{node[0]}</div>
+                    )}
+                </Dropdown.Item>
+            </Dropdown.Content>
+            </Dropdown.Menu>
+        </Dropdown>
+    );
+}
+
 function AddComponentButton(props) {
     const [open, setOpen] = React.useState(false);
     const [dropdownUp, setDropdownUp] = React.useState(true);
-    
-    // const fakeData = ["one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
     const dropdownRef = React.useRef(null);
     const filterRef = React.useRef(null);
     const onBlur = () => {

@@ -3,6 +3,7 @@ package frontend
 import (
 	"fmt"
 	"log"
+	"path/filepath"
 	"reflect"
 	"strconv"
 
@@ -38,6 +39,7 @@ type Component struct {
 type Node struct {
 	Name       string      `msgpack:"name"`
 	Path       string      `msgpack:"path"`
+	Dir        string      `msgpack:"dir"`
 	ID         string      `msgpack:"id"`
 	Index      int         `msgpack:"index"`
 	Active     bool        `msgpack:"active"`
@@ -220,6 +222,15 @@ type ButtonProvider interface {
 	InspectorButtons() []Button
 }
 
+func strInSlice(strs []string, str string) bool {
+	for _, s := range strs {
+		if s == str {
+			return true
+		}
+	}
+	return false
+}
+
 func exportNodes(s *State, root *manifold.Node) {
 	s.Hierarchy = []string{}
 	s.Nodes = make(map[string]Node)
@@ -228,6 +239,7 @@ func exportNodes(s *State, root *manifold.Node) {
 		node := Node{
 			Name:       n.Name,
 			Active:     n.Active,
+			Dir:        n.Dir,
 			Path:       n.FullPath(),
 			Index:      n.SiblingIndex(),
 			ID:         n.ID,
@@ -237,7 +249,11 @@ func exportNodes(s *State, root *manifold.Node) {
 			var fields []Field
 			c := reflected.ValueOf(com.Ref)
 			path := n.FullPath() + "/" + com.Name
+			hiddenFields := c.Type().FieldsTagged("tractor", "hidden")
 			for _, field := range c.Type().Fields() {
+				if strInSlice(hiddenFields, field) {
+					continue
+				}
 				fields = append(fields, exportField(c, field, path, n))
 			}
 			var buttons []Button
@@ -252,10 +268,11 @@ func exportNodes(s *State, root *manifold.Node) {
 					for i := 0; i < typ.NumMethod(); i++ {
 						method := typ.Method(i)
 						if method.Name != button.Name {
-							break
+							continue
 						}
 						if method.Type.NumIn() == 1 {
 							buttons[idx].Path = path + "/" + method.Name
+							break
 						}
 					}
 				}
@@ -482,13 +499,21 @@ func ListenAndServe(root *manifold.Node, addr string) error {
 		case params.IntValue != nil:
 			n.SetValue(localPath, *params.IntValue)
 		case params.RefValue != nil:
-			refNode := root.FindNode(*params.RefValue)
+			refPath := filepath.Dir(*params.RefValue) // TODO: support subfields
+			refNode := root.FindNode(refPath)
+			refType := n.Field(localPath)
 			if refNode != nil {
-				comName := (*params.RefValue)[len(refNode.FullPath())+1:]
-				c := refNode.Component(comName)
-				// TODO: check interface
+				typeSelector := (*params.RefValue)[len(refNode.FullPath())+1:]
+				c := refNode.Component(typeSelector)
 				if c != nil {
 					n.SetValue(localPath, c)
+				} else {
+					// interface reference
+					ptr := reflect.New(refType)
+					refNode.Registry.ValueTo(ptr)
+					if ptr.IsValid() {
+						n.SetValue(localPath, reflect.Indirect(ptr).Interface())
+					}
 				}
 			}
 		default:

@@ -91,7 +91,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 
-	serverTask = vscode.tasks.executeTask(new vscode.Task({ type: 'server', task: 'server' }, "server", "tractor", new vscode.ShellExecution("cd _workspace && go run ./cmd/daemon/daemon.go")));
+	serverTask = vscode.tasks.executeTask(new vscode.Task({ type: 'server', task: 'server' }, "server", "tractor", new vscode.ShellExecution("tractor run")));
 
 	setTimeout(() => {
 		let repl = vscode.window.createTerminal("repl", path.join(context.extensionPath, 'repl.js'));
