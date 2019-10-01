@@ -1,4 +1,28 @@
-TODO:
+# Setting up tractor
+### Clone the Tractor repo
+`go get gihtub.com/manifold/tractor`
+
+### Clone manifold/qtalk
+In the folders **qrpc/node** and **qmux/node** run:
+```
+yarn install
+yarn link
+```
+
+### Install Tractor dependencies
+Inside the **tractor** folder, you must link the `qprc` and `qmux` node packages so they can be used as dependencies during compilation
+```
+yarn install
+yarn link qmux
+yarn link qrpc
+yarn run compile
+```
+
+### Run tractor extension
+Using VSCode debugger (F5 on Windows) to start a VSCode environment with a Tractor tree view.
+
+
+# TODO:
 - rest of inspector actions (values)
     - number, bool, ref, maps/lists?
 - expressions?
