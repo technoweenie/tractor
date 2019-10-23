@@ -96,7 +96,7 @@ func (repl *REPL) Run(in io.Reader, out io.Writer, globals map[string]interface{
 			panic(err)
 		}
 		symbol := repl.symbolTable.Define(k)
-		repl.globals[symbol.Index] = &vv
+		repl.globals[symbol.Index] = vv
 	}
 	var constants []objects.Object
 	for {

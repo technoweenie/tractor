@@ -147,7 +147,7 @@ func Run() {
 		}
 	}()
 
-	log.Println("running daemon v0.1...")
+	log.Println("running daemon v0.1a...")
 	log.Fatal(ListenAndServe(addr))
 }
 
