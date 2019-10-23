@@ -20,14 +20,14 @@ import (
 type REPL struct {
 	Prompt      string
 	fileSet     *source.FileSet
-	globals     []*objects.Object
+	globals     []objects.Object
 	symbolTable *compiler.SymbolTable
 }
 
 func NewREPL(print func(interface{})) *REPL {
 	repl := &REPL{
 		fileSet:     source.NewFileSet(),
-		globals:     make([]*objects.Object, runtime.GlobalsSize),
+		globals:     make([]objects.Object, runtime.GlobalsSize),
 		symbolTable: compiler.NewSymbolTable(),
 	}
 	for idx, fn := range objects.Builtins {
@@ -55,7 +55,7 @@ func NewREPL(print func(interface{})) *REPL {
 		return nil, nil
 	}}
 	symbol := repl.symbolTable.Define("print")
-	repl.globals[symbol.Index] = &obj
+	repl.globals[symbol.Index] = obj
 
 	// for k, v := range globals {
 	// 	vv, err := FromInterface(v)
@@ -70,7 +70,8 @@ func NewREPL(print func(interface{})) *REPL {
 }
 
 func (repl *REPL) Evaluate(line string, constants []objects.Object) ([]objects.Object, error) {
-	file, err := parser.ParseFile(repl.fileSet.AddFile("repl", -1, len(line)), []byte(line), nil)
+	p := parser.NewParser(repl.fileSet.AddFile("repl", -1, len(line)), []byte(line), nil)
+	file, err := p.ParseFile()
 	if err != nil {
 		return constants, err
 	}
