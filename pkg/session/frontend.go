@@ -10,7 +10,7 @@ import (
 	"github.com/manifold/qtalk/libmux/mux"
 	"github.com/manifold/qtalk/qrpc"
 	"github.com/manifold/tractor/pkg/manifold"
-	"github.com/manifold/tractor/pkg/repl"
+	//"github.com/manifold/tractor/pkg/repl"
 	"github.com/manifold/tractor/pkg/workspace"
 	reflected "github.com/progrium/prototypes/go-reflected"
 )
@@ -358,51 +358,20 @@ func ListenAndServe(root *manifold.Node, addr string) error {
 		sendState()
 		r.Return(nil)
 	})
-	api.HandleFunc("repl", func(r qrpc.Responder, c *qrpc.Call) {
-		var params DelegateParams
-		_ = c.Decode(&params)
-		// ^^ TODO: make sure this isn't necessary before hijacking
-		ch, err := r.Hijack(nil)
-		if err != nil {
-			log.Println(err)
-		}
-		repl := repl.NewREPL(func(v interface{}) {
-			fmt.Fprintf(ch, "%s\n", v)
-		})
-		repl.Run(ch, ch, map[string]interface{}{
-			"Root": root,
-		})
-	})
-	// api.HandleFunc("readDelegate", func(r qrpc.Responder, c *qrpc.Call) {
+	// api.HandleFunc("repl", func(r qrpc.Responder, c *qrpc.Call) {
 	// 	var params DelegateParams
-	// 	err := c.Decode(&params)
+	// 	_ = c.Decode(&params)
+	// 	// ^^ TODO: make sure this isn't necessary before hijacking
+	// 	ch, err := r.Hijack(nil)
 	// 	if err != nil {
-	// 		r.Return(err)
-	// 		return
+	// 		log.Println(err)
 	// 	}
-	// 	src, err := workspace.DelegateSource(params.ID)
-	// 	if err != nil {
-	// 		r.Return(err)
-	// 		return
-	// 	}
-	// 	params.Contents = string(src)
-
-	// 	r.Return(params)
-	// })
-	// api.HandleFunc("writeDelegate", func(r qrpc.Responder, c *qrpc.Call) {
-	// 	var params DelegateParams
-	// 	err := c.Decode(&params)
-	// 	if err != nil {
-	// 		r.Return(err)
-	// 		return
-	// 	}
-	// 	err = workspace.WriteDelegate(params.ID, []byte(params.Contents))
-	// 	if err != nil {
-	// 		r.Return(err)
-	// 		return
-	// 	}
-
-	// 	r.Return(nil)
+	// 	repl := repl.NewREPL(func(v interface{}) {
+	// 		fmt.Fprintf(ch, "%s\n", v)
+	// 	})
+	// 	repl.Run(ch, ch, map[string]interface{}{
+	// 		"Root": root,
+	// 	})
 	// })
 	api.HandleFunc("removeComponent", func(r qrpc.Responder, c *qrpc.Call) {
 		var params RemoveComponentParams
