@@ -75,12 +75,12 @@ func (repl *REPL) Evaluate(line string, constants []objects.Object) ([]objects.O
 		return constants, err
 	}
 	file = addPrints(file)
-	c := compiler.NewCompiler(repl.symbolTable, constants, nil, nil)
+	c := compiler.NewCompiler(nil, repl.symbolTable, constants, nil, nil)
 	if err := c.Compile(file); err != nil {
 		return constants, err
 	}
 	bytecode := c.Bytecode()
-	machine := runtime.NewVM(bytecode, repl.globals)
+	machine := runtime.NewVM(bytecode, repl.globals, 1024)
 	if err := machine.Run(); err != nil {
 		return constants, err
 	}
