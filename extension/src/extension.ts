@@ -91,7 +91,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 
-	serverTask = vscode.tasks.executeTask(new vscode.Task({ type: 'server', task: 'server' }, "server", "tractor", new vscode.ShellExecution("tractor run")));
+	serverTask = vscode.tasks.executeTask(new vscode.Task({ type: 'server', task: 'server' }, "server", "tractor", new vscode.ShellExecution(`${path.join(context.extensionPath, '../dev/bin/tractor')} run`)));
 
 	// setTimeout(() => {
 	// 	let repl = vscode.window.createTerminal("repl", path.join(context.extensionPath, '../repl.js'));

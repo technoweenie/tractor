@@ -164,7 +164,7 @@ func CreateDelegate(node *manifold.Node) error {
 	if ok, _ := afero.Exists(fs, path.Join(node.ID, "delegate.go")); !ok {
 		delegate := fmt.Sprintf(`package node
 
-import "github.com/manifold/tractor/server/manifold"
+import "github.com/manifold/tractor/pkg/manifold"
 
 func init() {
 	manifold.RegisterDelegate(&Delegate{}, "%s")
@@ -180,7 +180,7 @@ type Delegate struct{}
 	var imports []string
 	ids := append(manifold.RegisteredDelegates(), node.ID)
 	for _, id := range ids {
-		imports = append(imports, fmt.Sprintf(` _ "./%s"`, id))
+		imports = append(imports, fmt.Sprintf(` _ "github.com/manifold/tractor/dev/workspace/delegates/%s"`, id))
 	}
 	delegates := fmt.Sprintf(`package delegates
 import (

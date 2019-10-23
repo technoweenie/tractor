@@ -5,7 +5,8 @@ Programmable computing environment
 ### Prerequisites
  * golang 1.13+
  * vscode
- * clone `manifold/qtalk` and run `make link`
+ * typescript `yarn global add typescript`
+ * clone [manifold/qtalk](https://github.com/manifold/qtalk) and run `make link`
 
 ### Setup
 ```
