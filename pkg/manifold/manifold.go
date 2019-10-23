@@ -12,7 +12,7 @@ import (
 
 	jsonpointer "github.com/dustin/go-jsonpointer"
 	"github.com/gliderlabs/com/objects"
-	"github.com/manifold/tractor/server/repl"
+	"github.com/manifold/tractor/pkg/repl"
 	"github.com/mitchellh/hashstructure"
 	"github.com/mitchellh/mapstructure"
 	reflected "github.com/progrium/prototypes/go-reflected"

@@ -9,9 +9,9 @@ import (
 
 	"github.com/manifold/qtalk/libmux/mux"
 	"github.com/manifold/qtalk/qrpc"
-	"github.com/manifold/tractor/server/manifold"
-	"github.com/manifold/tractor/server/manifold/workspace"
-	"github.com/manifold/tractor/server/repl"
+	"github.com/manifold/tractor/pkg/manifold"
+	"github.com/manifold/tractor/pkg/repl"
+	"github.com/manifold/tractor/pkg/workspace"
 	reflected "github.com/progrium/prototypes/go-reflected"
 )
 

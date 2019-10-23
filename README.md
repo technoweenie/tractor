@@ -1,24 +1,21 @@
-# Setting up tractor
-### Clone the Tractor repo
-`go get gihtub.com/manifold/tractor`
+# Tractor
 
-### Clone manifold/qtalk
-In the folders **qrpc/node** and **qmux/node** run:
-```
-yarn install
-yarn link
-```
+Programmable computing environment
 
-### Install Tractor dependencies
-Inside the **tractor** folder, you must link the `qprc` and `qmux` node packages so they can be used as dependencies during compilation
+### Prerequisites
+ * golang 1.13+
+ * vscode
+ * clone `manifold/qtalk` and run `make link`
+
+### Setup
 ```
-yarn install
-yarn link qmux
-yarn link qrpc
-yarn run compile
+$ make setup
 ```
 
-### Run tractor extension
+### Running
+Open the tractor directory in VS Code and run `Debug > Start Debugging`. 
+This brings up a new instance of VS Code running the Tractor extension.
+
 Using VSCode debugger (F5 on Windows) to start a VSCode environment with a Tractor tree view.
 
 

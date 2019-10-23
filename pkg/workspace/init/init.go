@@ -8,9 +8,13 @@ import (
 	"github.com/gliderlabs/com/objects"
 	"github.com/gliderlabs/stdcom/daemon"
 	"github.com/gliderlabs/stdcom/log/std"
-	"github.com/manifold/tractor/server/manifold"
-	"github.com/manifold/tractor/server/manifold/frontend"
-	"github.com/manifold/tractor/server/manifold/workspace"
+	"github.com/manifold/tractor/pkg/manifold"
+	frontend "github.com/manifold/tractor/pkg/session"
+	"github.com/manifold/tractor/pkg/workspace"
+
+	_ "github.com/manifold/tractor/com/file"
+	_ "github.com/manifold/tractor/com/http"
+	_ "github.com/manifold/tractor/com/net"
 )
 
 const addr = "localhost:4243"

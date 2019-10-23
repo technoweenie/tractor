@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/manifold/tractor/server/manifold"
+	"github.com/manifold/tractor/pkg/manifold"
 	"github.com/spf13/afero"
 )
 

@@ -1,6 +1,6 @@
 package main
 
-import "github.com/manifold/tractor/server/manifold/daemon"
+import "github.com/manifold/tractor/pkg/workspace/daemon"
 
 func main() {
 	// TODO: put under "run" subcommand
