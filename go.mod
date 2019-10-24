@@ -6,7 +6,7 @@ require (
 	github.com/d5/tengo v1.24.3
 	github.com/dustin/go-jsonpointer v0.0.0
 	github.com/dustin/gojson v0.0.0-20160307161227-2e71ec9dd5ad // indirect
-	github.com/gliderlabs/com v0.1.1-0.20191023181249-02615ad445ac // indirect
+	github.com/gliderlabs/com v0.1.1-0.20191023181249-02615ad445ac
 	github.com/gliderlabs/stdcom v0.0.0-20171109193247-64a0d4e5fd86
 	github.com/goji/httpauth v0.0.0-20160601135302-2da839ab0f4d
 	github.com/inconshreveable/muxado v0.0.0-20160802230925-fc182d90f26e // indirect
