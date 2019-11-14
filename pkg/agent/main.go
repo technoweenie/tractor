@@ -8,7 +8,7 @@ import (
 	"path"
 
 	"github.com/getlantern/systray"
-	"github.com/manifold/tractor/agent/icons"
+	"github.com/manifold/tractor/pkg/agent/icons"
 	"github.com/skratchdot/open-golang/open"
 )
 
