@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -36,7 +35,7 @@ func Open(path string) (*Agent, error) {
 }
 
 func (a *Agent) Workspaces() ([]*Workspace, error) {
-	names, err := a.WorkspaceNames()
+	names, err := a.workspaceNames()
 	if err != nil {
 		return nil, err
 	}
@@ -45,11 +44,7 @@ func (a *Agent) Workspaces() ([]*Workspace, error) {
 	for i, n := range names {
 		ws := a.workspaces[n]
 		if ws == nil {
-			ws = &Workspace{
-				Name:       n,
-				Path:       filepath.Join(a.WorkspacesPath, n),
-				SocketPath: filepath.Join(a.SocketsPath, fmt.Sprintf("%s.sock", n)),
-			}
+			ws = NewWorkspace(a, n)
 			a.workspaces[n] = ws
 		}
 		workspaces[i] = ws
@@ -57,7 +52,7 @@ func (a *Agent) Workspaces() ([]*Workspace, error) {
 	return workspaces, nil
 }
 
-func (a *Agent) WorkspaceNames() ([]string, error) {
+func (a *Agent) workspaceNames() ([]string, error) {
 	entries, err := ioutil.ReadDir(a.WorkspacesPath)
 	if err != nil {
 		return nil, err

@@ -33,7 +33,7 @@ func onReady() {
 	fatal(err)
 	for _, ws := range workspaces {
 		openItem := systray.AddMenuItem(ws.Name, "Open workspace")
-		openItem.SetIcon(icons.Available)
+		openItem.SetIcon(ws.Status.Icon)
 		go func(mi *systray.MenuItem, ws *agent.Workspace) {
 			<-openItem.ClickedCh
 			open.StartWith(ws.Path, "Visual Studio Code.app")
