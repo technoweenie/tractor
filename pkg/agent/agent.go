@@ -1,9 +1,11 @@
 package agent
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"os/user"
 	"path/filepath"
 )
@@ -13,6 +15,7 @@ type Agent struct {
 	AgentPath      string // ~/.tractor/agent.sock
 	WorkspacesPath string // ~/.tractor/workspaces
 	SocketsPath    string // ~/.tractor/sockets
+	bin            string
 	workspaces     map[string]*Workspace
 }
 
@@ -25,51 +28,53 @@ func Open(path string) (*Agent, error) {
 		path = p
 	}
 
+	bin, err := exec.LookPath("go")
+	if err != nil {
+		return nil, err
+	}
+
 	return &Agent{
 		Path:           path,
 		AgentPath:      filepath.Join(path, "agent.sock"),
 		WorkspacesPath: filepath.Join(path, "workspaces"),
 		SocketsPath:    filepath.Join(path, "sockets"),
+		bin:            bin,
 		workspaces:     make(map[string]*Workspace),
 	}, nil
 }
 
-func (a *Agent) Workspaces() ([]*Workspace, error) {
-	names, err := a.workspaceNames()
-	if err != nil {
-		return nil, err
+func (a *Agent) Shutdown() {
+	fmt.Println("shutdown")
+	for _, ws := range a.workspaces {
+		fmt.Println("shutting down", ws.Name)
+		ws.Stop()
 	}
-
-	workspaces := make([]*Workspace, len(names))
-	for i, n := range names {
-		ws := a.workspaces[n]
-		if ws == nil {
-			ws = NewWorkspace(a, n)
-			a.workspaces[n] = ws
-		}
-		workspaces[i] = ws
-	}
-	return workspaces, nil
 }
 
-func (a *Agent) workspaceNames() ([]string, error) {
+func (a *Agent) Workspaces() ([]*Workspace, error) {
 	entries, err := ioutil.ReadDir(a.WorkspacesPath)
 	if err != nil {
 		return nil, err
 	}
 
-	names := make([]string, 0, len(entries))
+	workspaces := make([]*Workspace, 0, len(entries))
 	for _, entry := range entries {
-		if !a.entryIsWorkspace(entry) {
+		if !a.isWorkspacePath(entry) {
 			continue
 		}
-		names = append(names, entry.Name())
-	}
 
-	return names, nil
+		n := entry.Name()
+		ws := a.workspaces[n]
+		if ws == nil {
+			ws = NewWorkspace(a, n)
+			a.workspaces[n] = ws
+		}
+		workspaces = append(workspaces, ws)
+	}
+	return workspaces, nil
 }
 
-func (a *Agent) entryIsWorkspace(fi os.FileInfo) bool {
+func (a *Agent) isWorkspacePath(fi os.FileInfo) bool {
 	if fi.IsDir() {
 		return true
 	}
