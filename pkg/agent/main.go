@@ -2,10 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
-	"os/user"
-	"path"
 
 	"github.com/getlantern/systray"
 	"github.com/manifold/tractor/pkg/agent/icons"
@@ -28,20 +25,18 @@ func onReady() {
 	systray.SetIcon(icons.Tractor)
 	systray.SetTooltip("Tractor")
 
-	usr, err := user.Current()
+	agent, err := Open("")
 	fatal(err)
-	workspacesPath := path.Join(usr.HomeDir, ".tractor", "workspaces")
-	files, err := ioutil.ReadDir(workspacesPath)
+
+	workspaces, err := agent.Workspaces()
 	fatal(err)
-	for _, file := range files {
-		if !file.IsDir() {
-			openItem := systray.AddMenuItem(file.Name(), "Open workspace")
-			openItem.SetIcon(icons.Available)
-			go func() {
-				<-openItem.ClickedCh
-				open.StartWith(path.Join(workspacesPath, file.Name()), "Visual Studio Code.app")
-			}()
-		}
+	for _, ws := range workspaces {
+		openItem := systray.AddMenuItem(ws.Name, "Open workspace")
+		openItem.SetIcon(icons.Available)
+		go func() {
+			<-openItem.ClickedCh
+			open.StartWith(ws.Path, "Visual Studio Code.app")
+		}()
 	}
 
 	systray.AddSeparator()
