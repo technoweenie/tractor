@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/getlantern/systray"
+	"github.com/manifold/tractor/pkg/agent"
 	"github.com/manifold/tractor/pkg/agent/icons"
 	"github.com/skratchdot/open-golang/open"
 )
@@ -25,25 +26,25 @@ func onReady() {
 	systray.SetIcon(icons.Tractor)
 	systray.SetTooltip("Tractor")
 
-	agent, err := Open("")
+	ag, err := agent.Open("")
 	fatal(err)
 
-	workspaces, err := agent.Workspaces()
+	workspaces, err := ag.Workspaces()
 	fatal(err)
 	for _, ws := range workspaces {
 		openItem := systray.AddMenuItem(ws.Name, "Open workspace")
 		openItem.SetIcon(icons.Available)
-		go func() {
+		go func(mi *systray.MenuItem, ws *agent.Workspace) {
 			<-openItem.ClickedCh
 			open.StartWith(ws.Path, "Visual Studio Code.app")
-		}()
+		}(openItem, ws)
 	}
 
 	systray.AddSeparator()
 	mQuitOrig := systray.AddMenuItem("Shutdown", "Quit and shutdown all workspaces")
-	go func() {
-		<-mQuitOrig.ClickedCh
+	go func(mi *systray.MenuItem) {
+		<-mi.ClickedCh
 		systray.Quit()
-	}()
+	}(mQuitOrig)
 
 }

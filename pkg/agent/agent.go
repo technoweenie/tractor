@@ -1,4 +1,4 @@
-package main
+package agent
 
 import (
 	"fmt"
@@ -10,11 +10,29 @@ import (
 )
 
 type Agent struct {
-	Path           string
+	Path           string // ~/.tractor
 	AgentPath      string // ~/.tractor/agent.sock
 	WorkspacesPath string // ~/.tractor/workspaces
 	SocketsPath    string // ~/.tractor/sockets
 	workspaces     map[string]*Workspace
+}
+
+func Open(path string) (*Agent, error) {
+	if len(path) == 0 {
+		p, err := defaultPath()
+		if err != nil {
+			return nil, err
+		}
+		path = p
+	}
+
+	return &Agent{
+		Path:           path,
+		AgentPath:      filepath.Join(path, "agent.sock"),
+		WorkspacesPath: filepath.Join(path, "workspaces"),
+		SocketsPath:    filepath.Join(path, "sockets"),
+		workspaces:     make(map[string]*Workspace),
+	}, nil
 }
 
 func (a *Agent) Workspaces() ([]*Workspace, error) {
@@ -80,25 +98,6 @@ func (a *Agent) entryIsWorkspace(fi os.FileInfo) bool {
 
 	return rfi.IsDir()
 }
-
-func Open(path string) (*Agent, error) {
-	if len(path) == 0 {
-		p, err := defaultPath()
-		if err != nil {
-			return nil, err
-		}
-		path = p
-	}
-
-	return &Agent{
-		Path:           path,
-		AgentPath:      filepath.Join(path, "agent.sock"),
-		WorkspacesPath: filepath.Join(path, "workspaces"),
-		SocketsPath:    filepath.Join(path, "sockets"),
-		workspaces:     make(map[string]*Workspace),
-	}, nil
-}
-
 func defaultPath() (string, error) {
 	usr, err := user.Current()
 	if err != nil {
