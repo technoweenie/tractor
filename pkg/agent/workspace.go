@@ -43,25 +43,25 @@ func (s WorkplaceStatus) String() string {
 }
 
 type Workspace struct {
-	Name       string // base name of dir (~/.tractor/workspaces/{name})
-	Path       string
-	SocketPath string // absolute path to socket file (~/.tractor/sockets/{name}.sock)
-	Status     WorkplaceStatus
-	buf        *Buffer
-	callbacks  []func(*Workspace)
-	pid        int
-	bin        string
-	mu         sync.Mutex
+	Name      string // base name of dir (~/.tractor/workspaces/{name})
+	Path      string
+	Socket    string // absolute path to socket file (~/.tractor/sockets/{name}.sock)
+	Status    WorkplaceStatus
+	buf       *Buffer
+	callbacks []func(*Workspace)
+	pid       int
+	bin       string
+	mu        sync.Mutex
 }
 
 func NewWorkspace(a *Agent, name string) *Workspace {
 	return &Workspace{
-		Name:       name,
-		Path:       filepath.Join(a.WorkspacesPath, name),
-		SocketPath: filepath.Join(a.SocketsPath, fmt.Sprintf("%s.sock", name)),
-		Status:     StatusPartially,
-		bin:        a.bin,
-		callbacks:  make([]func(*Workspace), 0),
+		Name:      name,
+		Path:      filepath.Join(a.WorkspacesPath, name),
+		Socket:    filepath.Join(a.SocketsPath, fmt.Sprintf("%s.sock", name)),
+		Status:    StatusPartially,
+		bin:       a.bin,
+		callbacks: make([]func(*Workspace), 0),
 	}
 }
 
@@ -96,7 +96,8 @@ func (w *Workspace) start() (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	cmd := exec.Command(w.bin, "run", "workspace.go")
+	cmd := exec.Command(w.bin, "run", "workspace.go",
+		"-proto", "unix", "-addr", w.Socket)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Dir = w.Path
 	cmd.Stdout = buf

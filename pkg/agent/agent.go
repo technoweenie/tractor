@@ -32,11 +32,14 @@ func Open(path string) (*Agent, error) {
 		return nil, err
 	}
 
+	socksPath := filepath.Join(path, "sockets")
+	os.MkdirAll(socksPath, 0755)
+
 	return &Agent{
 		Path:           path,
 		AgentSocket:    filepath.Join(path, "agent.sock"),
 		WorkspacesPath: filepath.Join(path, "workspaces"),
-		SocketsPath:    filepath.Join(path, "sockets"),
+		SocketsPath:    socksPath,
 		bin:            bin,
 		workspaces:     make(map[string]*Workspace),
 	}, nil
