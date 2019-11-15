@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"bytes"
 	"io"
 	"sync"
 
@@ -64,8 +65,9 @@ func (b *Buffer) Release(r *PipeReader) {
 func (b *Buffer) Pipe() io.ReadCloser {
 	pr, pw := io.Pipe()
 	pr2 := &PipeReader{
-		PipeReader: pr,
-		buf:        b,
+		Reader: io.MultiReader(bytes.NewBuffer(b.CircularBytes()), pr),
+		pr:     pr,
+		buf:    b,
 	}
 
 	b.muPipe.Lock()
@@ -77,7 +79,7 @@ func (b *Buffer) Pipe() io.ReadCloser {
 func (b *Buffer) Close() error {
 	b.muPipe.Lock()
 	for pr := range b.pipes {
-		pr.PipeReader.Close()
+		pr.pr.Close()
 		delete(b.pipes, pr)
 	}
 	b.muPipe.Unlock()
@@ -85,12 +87,13 @@ func (b *Buffer) Close() error {
 }
 
 type PipeReader struct {
-	*io.PipeReader
-	buf *Buffer
+	io.Reader                // multi reader containing circbuf + pipe reader
+	pr        *io.PipeReader // keep ref so it can be closed directly
+	buf       *Buffer
 }
 
 func (r *PipeReader) Close() error {
-	err := r.PipeReader.Close()
+	err := r.pr.Close()
 	r.buf.Release(r)
 	return err
 }
