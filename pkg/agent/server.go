@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 
 	"github.com/manifold/qtalk/libmux/mux"
 	"github.com/manifold/qtalk/qrpc"
 )
 
-func ListenAndServe(a *Agent, addr string) error {
+func ListenAndServe(a *Agent) error {
 	api := qrpc.NewAPI()
 	api.HandleFunc("connect", func(r qrpc.Responder, c *qrpc.Call) {
 		ws, err := findWorkspace(a, c)
@@ -49,11 +50,15 @@ func ListenAndServe(a *Agent, addr string) error {
 	})
 
 	server := &qrpc.Server{}
-	l, err := mux.ListenWebsocket(addr)
+	l, err := mux.ListenUnix(a.AgentPath)
 	if err != nil {
 		return err
 	}
-	log.Println("websocket server listening at", addr)
+	defer func() {
+		os.Remove(a.AgentPath)
+	}()
+
+	log.Println("unix server listening at", a.AgentPath)
 	return server.Serve(l, api)
 }
 

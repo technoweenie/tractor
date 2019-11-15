@@ -21,7 +21,7 @@ func main() {
 	fatal(err)
 
 	go func(a *agent.Agent) {
-		log.Fatal(agent.ListenAndServe(a, ":8081"))
+		log.Fatal(agent.ListenAndServe(a))
 	}(ag)
 
 	systray.Run(onReady(ag), func() {

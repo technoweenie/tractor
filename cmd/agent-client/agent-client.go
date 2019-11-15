@@ -28,7 +28,7 @@ func main() {
 	}
 
 	// connect client to server, call echo
-	sess, err := mux.DialWebsocket(*addr)
+	sess, err := mux.DialUnix(*addr)
 	if err != nil {
 		log.Fatal(err)
 	}
