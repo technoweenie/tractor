@@ -54,12 +54,11 @@ func ListenAndServe(a *Agent) error {
 	if err != nil {
 		return err
 	}
-	defer func() {
-		os.Remove(a.AgentSocket)
-	}()
 
 	log.Println("unix server listening at", a.AgentSocket)
-	return server.Serve(l, api)
+	err = server.Serve(l, api)
+	os.Remove(a.AgentSocket)
+	return err
 }
 
 type workspaceFunc func() (io.ReadCloser, error)
@@ -88,6 +87,7 @@ func findWorkspace(a *Agent, call *qrpc.Call) (*Workspace, error) {
 	if err := call.Decode(&workspacePath); err != nil {
 		return nil, err
 	}
+	log.Println("[qrpc]", call.Destination, workspacePath)
 
 	if ws := a.Workspace(workspacePath); ws != nil {
 		return ws, nil

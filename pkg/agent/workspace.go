@@ -3,6 +3,7 @@ package agent
 import (
 	"fmt"
 	"io"
+	"log"
 	"os/exec"
 	"path/filepath"
 	"sync"
@@ -27,6 +28,17 @@ func (s WorkplaceStatus) Icon() []byte {
 		return icons.Partially
 	default:
 		return icons.Unavailable
+	}
+}
+
+func (s WorkplaceStatus) String() string {
+	switch int(s) {
+	case 0:
+		return "Available"
+	case 1:
+		return "Partially"
+	default:
+		return "Unavailable"
 	}
 }
 
@@ -145,6 +157,11 @@ func (w *Workspace) unavailable() int {
 
 // always run when w.mu mutex is locked
 func (w *Workspace) setStatus(s WorkplaceStatus) {
+	if w.Status == s {
+		return
+	}
+
+	log.Println("[workspace]", w.Name, "state:", w.Status, "=>", s)
 	w.Status = s
 	for _, cb := range w.callbacks {
 		cb(w)
