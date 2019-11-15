@@ -11,7 +11,7 @@ import (
 	"github.com/manifold/tractor/pkg/agent/icons"
 )
 
-type Status int
+type WorkplaceStatus int
 
 const (
 	StatusAvailable = iota
@@ -19,7 +19,7 @@ const (
 	StatusUnavailable
 )
 
-func (s Status) Icon() []byte {
+func (s WorkplaceStatus) Icon() []byte {
 	switch int(s) {
 	case 0:
 		return icons.Available
@@ -34,7 +34,7 @@ type Workspace struct {
 	Name       string // base name of dir (~/.tractor/workspaces/{name})
 	Path       string
 	SocketPath string // absolute path to socket file (~/.tractor/sockets/{name}.sock)
-	Status     Status
+	Status     WorkplaceStatus
 	buf        *Buffer
 	callbacks  []func(*Workspace)
 	pid        int
@@ -144,7 +144,7 @@ func (w *Workspace) unavailable() int {
 }
 
 // always run when w.mu mutex is locked
-func (w *Workspace) setStatus(s Status) {
+func (w *Workspace) setStatus(s WorkplaceStatus) {
 	w.Status = s
 	for _, cb := range w.callbacks {
 		cb(w)

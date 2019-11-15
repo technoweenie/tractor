@@ -11,7 +11,7 @@ import (
 
 type Agent struct {
 	Path           string // ~/.tractor
-	AgentPath      string // ~/.tractor/agent.sock
+	AgentSocket    string // ~/.tractor/agent.sock
 	WorkspacesPath string // ~/.tractor/workspaces
 	SocketsPath    string // ~/.tractor/sockets
 	bin            string
@@ -34,7 +34,7 @@ func Open(path string) (*Agent, error) {
 
 	return &Agent{
 		Path:           path,
-		AgentPath:      filepath.Join(path, "agent.sock"),
+		AgentSocket:    filepath.Join(path, "agent.sock"),
 		WorkspacesPath: filepath.Join(path, "workspaces"),
 		SocketsPath:    filepath.Join(path, "sockets"),
 		bin:            bin,
@@ -60,7 +60,7 @@ func (a *Agent) Workspaces() ([]*Workspace, error) {
 
 	workspaces := make([]*Workspace, 0, len(entries))
 	for _, entry := range entries {
-		if !a.isWorkspacePath(entry) {
+		if !a.isWorkspace(entry) {
 			continue
 		}
 
@@ -75,7 +75,7 @@ func (a *Agent) Workspaces() ([]*Workspace, error) {
 	return workspaces, nil
 }
 
-func (a *Agent) isWorkspacePath(fi os.FileInfo) bool {
+func (a *Agent) isWorkspace(fi os.FileInfo) bool {
 	if fi.IsDir() {
 		return true
 	}
@@ -99,6 +99,7 @@ func (a *Agent) isWorkspacePath(fi os.FileInfo) bool {
 
 	return rfi.IsDir()
 }
+
 func defaultPath() (string, error) {
 	usr, err := user.Current()
 	if err != nil {

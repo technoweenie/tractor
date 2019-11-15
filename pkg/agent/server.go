@@ -50,15 +50,15 @@ func ListenAndServe(a *Agent) error {
 	})
 
 	server := &qrpc.Server{}
-	l, err := mux.ListenUnix(a.AgentPath)
+	l, err := mux.ListenUnix(a.AgentSocket)
 	if err != nil {
 		return err
 	}
 	defer func() {
-		os.Remove(a.AgentPath)
+		os.Remove(a.AgentSocket)
 	}()
 
-	log.Println("unix server listening at", a.AgentPath)
+	log.Println("unix server listening at", a.AgentSocket)
 	return server.Serve(l, api)
 }
 
