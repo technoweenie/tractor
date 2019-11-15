@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
 
 	"github.com/getlantern/systray"
 	"github.com/manifold/tractor/pkg/agent"
@@ -62,4 +64,16 @@ func buildSystray(ag *agent.Agent) {
 		<-mi.ClickedCh
 		systray.Quit()
 	}(mQuitOrig)
+
+	notifySig()
+}
+
+func notifySig() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+
+	go func() {
+		<-c
+		systray.Quit()
+	}()
 }
