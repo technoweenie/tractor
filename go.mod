@@ -3,9 +3,9 @@ module github.com/manifold/tractor
 go 1.12
 
 require (
+	github.com/armon/circbuf v0.0.0-20190214190532-5111143e8da2
 	github.com/d5/tengo v1.24.3
 	github.com/dustin/go-jsonpointer v0.0.0
-	github.com/dustin/gojson v0.0.0-20160307161227-2e71ec9dd5ad // indirect
 	github.com/getlantern/systray v0.0.0-20191111190243-1a6b33f30317
 	github.com/gliderlabs/com v0.1.1-0.20191023181249-02615ad445ac
 	github.com/gliderlabs/stdcom v0.0.0-20171109193247-64a0d4e5fd86
