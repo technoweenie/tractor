@@ -7,12 +7,9 @@ import (
 	"path/filepath"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/manifold/tractor/pkg/agent/icons"
 )
-
-var BufferSize int64 = 1024 * 1024
 
 type Status int
 
@@ -38,6 +35,7 @@ type Workspace struct {
 	Path       string
 	SocketPath string // absolute path to socket file (~/.tractor/sockets/{name}.sock)
 	Status     Status
+	callbacks  []func(*Workspace)
 	pid        int
 	bin        string
 	mu         sync.Mutex
@@ -50,6 +48,7 @@ func NewWorkspace(a *Agent, name string) *Workspace {
 		SocketPath: filepath.Join(a.SocketsPath, fmt.Sprintf("%s.sock", name)),
 		Status:     StatusUnavailable,
 		bin:        a.bin,
+		callbacks:  make([]func(*Workspace), 0),
 	}
 }
 
@@ -57,13 +56,11 @@ func NewWorkspace(a *Agent, name string) *Workspace {
 // not exist, using the path basename as the symlink name
 func (w *Workspace) Start(out io.Writer) error {
 	w.mu.Lock()
-	w.Status = StatusPartially
+	w.setStatus(StatusUnavailable)
 	w.mu.Unlock()
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
-
-	time.Sleep(time.Second * 5)
 
 	cmd := exec.Command(w.bin, "run", "workspace.go")
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
@@ -74,7 +71,7 @@ func (w *Workspace) Start(out io.Writer) error {
 	}
 
 	if err := cmd.Start(); err != nil {
-		w.Status = StatusUnavailable
+		w.setStatus(StatusUnavailable)
 		return err
 	}
 
@@ -84,7 +81,7 @@ func (w *Workspace) Start(out io.Writer) error {
 	}(cmd, w)
 
 	w.pid = cmd.Process.Pid
-	w.Status = StatusAvailable
+	w.setStatus(StatusAvailable)
 	return nil
 }
 
@@ -93,11 +90,26 @@ func (w *Workspace) Stop() error {
 	return syscall.Kill(-w.unavailable(), syscall.SIGTERM)
 }
 
+func (w *Workspace) OnStatusChange(cb func(*Workspace)) {
+	cb(w)
+	w.mu.Lock()
+	w.callbacks = append(w.callbacks, cb)
+	w.mu.Unlock()
+}
+
 func (w *Workspace) unavailable() int {
 	w.mu.Lock()
 	pid := w.pid
 	w.pid = 0
-	w.Status = StatusUnavailable
+	w.setStatus(StatusUnavailable)
 	w.mu.Unlock()
 	return pid
+}
+
+// always run when w.mu mutex is locked
+func (w *Workspace) setStatus(s Status) {
+	w.Status = s
+	for _, cb := range w.callbacks {
+		cb(w)
+	}
 }
