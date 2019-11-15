@@ -43,6 +43,10 @@ func Open(path string) (*Agent, error) {
 	}, nil
 }
 
+func (a *Agent) Workspace(path string) *Workspace {
+	return a.workspaces[path]
+}
+
 func (a *Agent) Shutdown() {
 	fmt.Println("shutdown")
 	for _, ws := range a.workspaces {

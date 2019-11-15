@@ -20,6 +20,10 @@ func main() {
 	ag, err := agent.Open("")
 	fatal(err)
 
+	go func(a *agent.Agent) {
+		log.Fatal(agent.ListenAndServe(a, ":8081"))
+	}(ag)
+
 	systray.Run(onReady(ag), func() {
 		fmt.Println("Shutting down...")
 		ag.Shutdown()
