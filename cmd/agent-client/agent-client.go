@@ -9,6 +9,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/manifold/qtalk/libmux/mux"
 	"github.com/manifold/qtalk/qrpc"
@@ -45,6 +46,7 @@ func main() {
 	}
 
 	client := &qrpc.Client{Session: sess}
+	start := time.Now()
 	resp, err := client.Call(cmd, flag.Arg(1), nil)
 	if err != nil {
 		log.Fatal(err)
@@ -52,7 +54,8 @@ func main() {
 
 	if resp.Hijacked {
 		io.Copy(os.Stdout, resp.Channel)
-	} else {
-		fmt.Println("not hijacked")
+		fmt.Println()
 	}
+
+	fmt.Printf("qrpc: %s(%q) %s\n", cmd, flag.Arg(1), time.Since(start))
 }
