@@ -59,17 +59,13 @@ func NewWorkspace(a *Agent, name string) *Workspace {
 		Name:       name,
 		Path:       filepath.Join(a.WorkspacesPath, name),
 		SocketPath: filepath.Join(a.SocketsPath, fmt.Sprintf("%s.sock", name)),
-		Status:     StatusUnavailable,
+		Status:     StatusPartially,
 		bin:        a.bin,
 		callbacks:  make([]func(*Workspace), 0),
 	}
 }
 
 func (w *Workspace) Connect() (io.ReadCloser, error) {
-	w.mu.Lock()
-	w.setStatus(StatusPartially)
-	w.mu.Unlock()
-
 	w.mu.Lock()
 	if w.buf != nil {
 		w.setStatus(StatusAvailable)
@@ -87,10 +83,6 @@ func (w *Workspace) Connect() (io.ReadCloser, error) {
 // Start starts the workspace daemon. creates the symlink to the path if it does
 // not exist, using the path basename as the symlink name
 func (w *Workspace) Start() (io.ReadCloser, error) {
-	w.mu.Lock()
-	w.setStatus(StatusPartially)
-	w.mu.Unlock()
-
 	w.mu.Lock()
 	out, err := w.start()
 	w.mu.Unlock()
