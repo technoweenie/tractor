@@ -60,7 +60,7 @@ func NewWorkspace(a *Agent, name string) *Workspace {
 		Path:      filepath.Join(a.WorkspacesPath, name),
 		Socket:    filepath.Join(a.SocketsPath, fmt.Sprintf("%s.sock", name)),
 		Status:    StatusPartially,
-		bin:       a.bin,
+		bin:       a.Bin,
 		callbacks: make([]func(*Workspace), 0),
 	}
 }

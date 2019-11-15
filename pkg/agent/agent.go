@@ -14,35 +14,37 @@ type Agent struct {
 	AgentSocket    string // ~/.tractor/agent.sock
 	WorkspacesPath string // ~/.tractor/workspaces
 	SocketsPath    string // ~/.tractor/sockets
-	bin            string
+	Bin            string
 	workspaces     map[string]*Workspace
 }
 
 func Open(path string) (*Agent, error) {
-	if len(path) == 0 {
-		p, err := defaultPath()
-		if err != nil {
-			return nil, err
-		}
-		path = p
-	}
-
 	bin, err := exec.LookPath("go")
 	if err != nil {
 		return nil, err
 	}
 
-	socksPath := filepath.Join(path, "sockets")
-	os.MkdirAll(socksPath, 0700)
+	a := &Agent{
+		Path:       path,
+		Bin:        bin,
+		workspaces: make(map[string]*Workspace),
+	}
 
-	return &Agent{
-		Path:           path,
-		AgentSocket:    filepath.Join(path, "agent.sock"),
-		WorkspacesPath: filepath.Join(path, "workspaces"),
-		SocketsPath:    socksPath,
-		bin:            bin,
-		workspaces:     make(map[string]*Workspace),
-	}, nil
+	if len(a.Path) == 0 {
+		p, err := defaultPath()
+		if err != nil {
+			return nil, err
+		}
+		a.Path = p
+	}
+
+	a.AgentSocket = filepath.Join(a.Path, "agent.sock")
+	a.WorkspacesPath = filepath.Join(a.Path, "workspaces")
+	a.SocketsPath = filepath.Join(a.Path, "sockets")
+	os.MkdirAll(a.WorkspacesPath, 0700)
+	os.MkdirAll(a.SocketsPath, 0700)
+
+	return a, nil
 }
 
 func (a *Agent) Workspace(path string) *Workspace {
