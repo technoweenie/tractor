@@ -1,7 +1,6 @@
 package agent
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -48,9 +47,7 @@ func (a *Agent) Workspace(path string) *Workspace {
 }
 
 func (a *Agent) Shutdown() {
-	fmt.Println("shutdown")
 	for _, ws := range a.workspaces {
-		fmt.Println("shutting down", ws.Name)
 		ws.Stop()
 	}
 }

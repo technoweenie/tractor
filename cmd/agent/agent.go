@@ -40,26 +40,8 @@ func buildSystray(ag *agent.Agent) {
 
 	workspaces, err := ag.Workspaces()
 	fatal(err)
+
 	for _, ws := range workspaces {
-		// for testing only
-		/*
-			fmt.Printf("%+v\n", ws)
-			buf := &bytes.Buffer{}
-			if err := ws.Start(buf); err != nil {
-				fmt.Println(err)
-			}
-
-			io.Copy(os.Stdout, buf)
-			go func(w io.WriterTo) {
-				for {
-					fmt.Println("writeto...")
-					w.WriteTo(os.Stdout)
-					fmt.Println("written")
-					time.Sleep(time.Second * 1)
-				}
-			}(buf)
-		*/
-
 		openItem := systray.AddMenuItem(ws.Name, "Open workspace")
 
 		ws.OnStatusChange(func(ws *agent.Workspace) {

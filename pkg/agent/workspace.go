@@ -35,6 +35,7 @@ type Workspace struct {
 	Path       string
 	SocketPath string // absolute path to socket file (~/.tractor/sockets/{name}.sock)
 	Status     Status
+	buf        *Buffer
 	callbacks  []func(*Workspace)
 	pid        int
 	bin        string
@@ -52,42 +53,74 @@ func NewWorkspace(a *Agent, name string) *Workspace {
 	}
 }
 
-// Start starts the workspace daemon. creates the symlink to the path if it does
-// not exist, using the path basename as the symlink name
-func (w *Workspace) Start(out io.Writer) error {
+func (w *Workspace) Connect() (io.ReadCloser, error) {
 	w.mu.Lock()
-	w.setStatus(StatusUnavailable)
+	w.setStatus(StatusPartially)
 	w.mu.Unlock()
 
 	w.mu.Lock()
-	defer w.mu.Unlock()
+	if w.buf != nil {
+		w.setStatus(StatusAvailable)
+		out := w.buf.Pipe()
+		w.mu.Unlock()
+
+		return out, nil
+	}
+
+	out, err := w.start()
+	w.mu.Unlock()
+	return out, err
+}
+
+// Start starts the workspace daemon. creates the symlink to the path if it does
+// not exist, using the path basename as the symlink name
+func (w *Workspace) Start() (io.ReadCloser, error) {
+	w.mu.Lock()
+	w.setStatus(StatusPartially)
+	w.mu.Unlock()
+
+	w.mu.Lock()
+	out, err := w.start()
+	w.mu.Unlock()
+	return out, err
+}
+
+// must run this when the w.mu mutex is locked
+func (w *Workspace) start() (io.ReadCloser, error) {
+	buf, err := NewBuffer(1024 * 1024)
+	if err != nil {
+		return nil, err
+	}
 
 	cmd := exec.Command(w.bin, "run", "workspace.go")
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Dir = w.Path
-	if out != nil {
-		cmd.Stdout = out
-		cmd.Stderr = out
-	}
+	cmd.Stdout = buf
+	cmd.Stderr = buf
 
 	if err := cmd.Start(); err != nil {
 		w.setStatus(StatusUnavailable)
-		return err
+		return nil, err
 	}
+
+	w.buf = buf
+	w.pid = cmd.Process.Pid
+	w.setStatus(StatusAvailable)
 
 	go func(c *exec.Cmd, ws *Workspace) {
 		c.Wait()
 		ws.unavailable()
 	}(cmd, w)
 
-	w.pid = cmd.Process.Pid
-	w.setStatus(StatusAvailable)
-	return nil
+	return buf.Pipe(), nil
 }
 
 // Stop stops the workspace daemon, deleting the unix socket file.
 func (w *Workspace) Stop() error {
-	return syscall.Kill(-w.unavailable(), syscall.SIGTERM)
+	if pid := w.unavailable(); pid > 0 {
+		return syscall.Kill(-pid, syscall.SIGTERM)
+	}
+	return nil
 }
 
 func (w *Workspace) OnStatusChange(cb func(*Workspace)) {
@@ -99,6 +132,10 @@ func (w *Workspace) OnStatusChange(cb func(*Workspace)) {
 
 func (w *Workspace) unavailable() int {
 	w.mu.Lock()
+	if w.buf != nil {
+		w.buf.Close()
+		w.buf = nil
+	}
 	pid := w.pid
 	w.pid = 0
 	w.setStatus(StatusUnavailable)

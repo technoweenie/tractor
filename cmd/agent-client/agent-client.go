@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/manifold/qtalk/libmux/mux"
@@ -32,10 +34,14 @@ func main() {
 	}
 
 	client := &qrpc.Client{Session: sess}
-	var resp string
-	_, err = client.Call(cmd, flag.Arg(1), &resp)
+	resp, err := client.Call(cmd, flag.Arg(1), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("resp: %#v\n", resp)
+
+	if resp.Hijacked {
+		io.Copy(os.Stdout, resp.Channel)
+	} else {
+		fmt.Println("not hijacked")
+	}
 }
