@@ -33,7 +33,7 @@ func Open(path string) (*Agent, error) {
 	}
 
 	socksPath := filepath.Join(path, "sockets")
-	os.MkdirAll(socksPath, 0755)
+	os.MkdirAll(socksPath, 0700)
 
 	return &Agent{
 		Path:           path,
