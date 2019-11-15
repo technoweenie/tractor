@@ -6,13 +6,15 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/user"
+	"path/filepath"
 	"strings"
 
 	"github.com/manifold/qtalk/libmux/mux"
 	"github.com/manifold/qtalk/qrpc"
 )
 
-var addr = flag.String("addr", ":8081", "qrpc server address")
+var sock = flag.String("sock", "", "qrpc server unix socket")
 
 var commands = map[string]bool{
 	"connect": true,
@@ -27,8 +29,17 @@ func main() {
 		cmd = "connect"
 	}
 
+	socket := *sock
+	if len(socket) == 0 {
+		usr, err := user.Current()
+		if err != nil {
+			log.Fatal(err)
+		}
+		socket = filepath.Join(usr.HomeDir, ".tractor", "agent.sock")
+	}
+
 	// connect client to server, call echo
-	sess, err := mux.DialUnix(*addr)
+	sess, err := mux.DialUnix(socket)
 	if err != nil {
 		log.Fatal(err)
 	}
