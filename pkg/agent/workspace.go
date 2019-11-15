@@ -2,13 +2,13 @@ package agent
 
 import (
 	"fmt"
+	"io"
 	"os/exec"
 	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
 
-	"github.com/armon/circbuf"
 	"github.com/manifold/tractor/pkg/agent/icons"
 )
 
@@ -38,9 +38,8 @@ type Workspace struct {
 	Path       string
 	SocketPath string // absolute path to socket file (~/.tractor/sockets/{name}.sock)
 	Status     Status
-	Command    *exec.Cmd
+	pid        int
 	bin        string
-	buf        *circbuf.Buffer
 	mu         sync.Mutex
 }
 
@@ -54,16 +53,9 @@ func NewWorkspace(a *Agent, name string) *Workspace {
 	}
 }
 
-func (w *Workspace) Bytes() []byte {
-	if w == nil || w.buf == nil {
-		return nil
-	}
-	return w.buf.Bytes()
-}
-
 // Start starts the workspace daemon. creates the symlink to the path if it does
 // not exist, using the path basename as the symlink name
-func (w *Workspace) Start() error {
+func (w *Workspace) Start(out io.Writer) error {
 	w.mu.Lock()
 	w.Status = StatusPartially
 	w.mu.Unlock()
@@ -73,33 +65,39 @@ func (w *Workspace) Start() error {
 
 	time.Sleep(time.Second * 5)
 
-	var err error
-	w.buf, err = circbuf.NewBuffer(BufferSize)
-	if err != nil {
+	cmd := exec.Command(w.bin, "run", "workspace.go")
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Dir = w.Path
+	if out != nil {
+		cmd.Stdout = out
+		cmd.Stderr = out
+	}
+
+	if err := cmd.Start(); err != nil {
 		w.Status = StatusUnavailable
 		return err
 	}
 
-	fmt.Println(w.bin, w.Path)
-	w.Command = exec.Command(w.bin, "run", "workspace.go")
-	w.Command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	w.Command.Dir = w.Path
-	w.Command.Stdout = w.buf
-	w.Command.Stderr = w.buf
+	go func(c *exec.Cmd, ws *Workspace) {
+		c.Wait()
+		ws.unavailable()
+	}(cmd, w)
 
-	if err := w.Command.Run(); err != nil {
-		w.Status = StatusUnavailable
-		return err
-	}
-
+	w.pid = cmd.Process.Pid
 	w.Status = StatusAvailable
 	return nil
 }
 
 // Stop stops the workspace daemon, deleting the unix socket file.
 func (w *Workspace) Stop() error {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+	return syscall.Kill(-w.unavailable(), syscall.SIGTERM)
+}
 
-	return syscall.Kill(-w.Command.Process.Pid, syscall.SIGTERM)
+func (w *Workspace) unavailable() int {
+	w.mu.Lock()
+	pid := w.pid
+	w.pid = 0
+	w.Status = StatusUnavailable
+	w.mu.Unlock()
+	return pid
 }
