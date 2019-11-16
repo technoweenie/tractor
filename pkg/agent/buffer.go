@@ -33,6 +33,18 @@ func (b *Buffer) CircularBytes() []byte {
 	return by
 }
 
+func (b *Buffer) Status() (int, int64) {
+	if b == nil {
+		return 0, 0
+	}
+
+	b.muBuf.Lock()
+	tw := b.buf.TotalWritten()
+	n := len(b.pipes)
+	b.muBuf.Unlock()
+	return n, tw
+}
+
 func (b *Buffer) Write(by []byte) (int, error) {
 	b.muBuf.Lock()
 	n, err := b.buf.Write(by)

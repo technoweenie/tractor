@@ -139,6 +139,10 @@ func (w *Workspace) OnStatusChange(cb func(*Workspace)) {
 	w.mu.Unlock()
 }
 
+func (w *Workspace) BufferStatus() (int, int64) {
+	return w.buf.Status()
+}
+
 // weird method: resets cmd buffer/pid, sets the menu item status, and returns
 // the pid for Close()
 func (w *Workspace) resetPid(s WorkspaceStatus) int {

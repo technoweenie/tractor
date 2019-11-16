@@ -5,6 +5,8 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/manifold/qtalk/libmux/mux"
 	"github.com/manifold/qtalk/qrpc"
@@ -49,6 +51,21 @@ func ListenAndServe(a *Agent) error {
 		r.Return(fmt.Sprintf("workspace %q stopped", ws.Name))
 	})
 
+	go func() {
+		var lastMsg string
+		for {
+			time.Sleep(time.Second * 3)
+			msg, err := wsStatus(a)
+			if err != nil {
+				log.Println("[workspaces]", err)
+			}
+			if lastMsg != msg && len(msg) > 0 {
+				log.Println("[workspaces]", msg)
+			}
+			lastMsg = msg
+		}
+	}()
+
 	server := &qrpc.Server{}
 	l, err := mux.ListenUnix(a.AgentSocket)
 	if err != nil {
@@ -59,6 +76,21 @@ func ListenAndServe(a *Agent) error {
 	err = server.Serve(l, api)
 	os.Remove(a.AgentSocket)
 	return err
+}
+
+func wsStatus(a *Agent) (string, error) {
+	workspaces, err := a.Workspaces()
+	if err != nil || len(workspaces) == 0 {
+		return "", err
+	}
+
+	pairs := make([]string, len(workspaces))
+	for i, ws := range workspaces {
+		p, w := ws.BufferStatus()
+		pairs[i] = fmt.Sprintf("%s=%s (%d pipe(s), %d written)",
+			ws.Name, ws.Status, p, w)
+	}
+	return strings.Join(pairs, ", "), nil
 }
 
 type workspaceFunc func() (io.ReadCloser, error)
