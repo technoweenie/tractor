@@ -47,7 +47,8 @@ func main() {
 
 	client := &qrpc.Client{Session: sess}
 	start := time.Now()
-	resp, err := client.Call(cmd, flag.Arg(1), nil)
+	var msg string
+	resp, err := client.Call(cmd, flag.Arg(1), &msg)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -55,6 +56,8 @@ func main() {
 	if resp.Hijacked {
 		io.Copy(os.Stdout, resp.Channel)
 		fmt.Println()
+	} else {
+		fmt.Println(msg)
 	}
 
 	fmt.Printf("qrpc: %s(%q) %s\n", cmd, flag.Arg(1), time.Since(start))
