@@ -67,6 +67,7 @@ func NewWorkspace(a *Agent, name string) *Workspace {
 
 func (w *Workspace) Connect() (io.ReadCloser, error) {
 	w.mu.Lock()
+	log.Println("[workspace]", w.Name, "Connect()")
 	if w.buf != nil {
 		w.setStatus(StatusAvailable)
 		out := w.buf.Pipe()
@@ -83,8 +84,13 @@ func (w *Workspace) Connect() (io.ReadCloser, error) {
 // Start starts the workspace daemon. creates the symlink to the path if it does
 // not exist, using the path basename as the symlink name
 func (w *Workspace) Start() (io.ReadCloser, error) {
-	w.Stop()
 	w.mu.Lock()
+	log.Println("[workspace]", w.Name, "Start()")
+
+	w.resetPid(StatusPartially, func(pid int) error {
+		return syscall.Kill(-pid, syscall.SIGTERM)
+	})
+
 	out, err := w.start()
 	w.mu.Unlock()
 	return out, err
@@ -115,10 +121,10 @@ func (w *Workspace) start() (io.ReadCloser, error) {
 
 	go func(c *exec.Cmd, ws *Workspace) {
 		if err := c.Wait(); err != nil {
-			ws.resetPid(StatusUnavailable)
+			ws.resetPidWithMu(StatusUnavailable, nil)
 			return
 		}
-		ws.resetPid(StatusPartially)
+		ws.resetPidWithMu(StatusPartially, nil)
 	}(cmd, w)
 
 	return buf.Pipe(), nil
@@ -126,10 +132,14 @@ func (w *Workspace) start() (io.ReadCloser, error) {
 
 // Stop stops the workspace daemon, deleting the unix socket file.
 func (w *Workspace) Stop() error {
-	if pid := w.resetPid(StatusPartially); pid > 0 {
+	w.mu.Lock()
+	log.Println("[workspace]", w.Name, "Stop()")
+
+	err := w.resetPid(StatusPartially, func(pid int) error {
 		return syscall.Kill(-pid, syscall.SIGTERM)
-	}
-	return nil
+	})
+	w.mu.Unlock()
+	return err
 }
 
 func (w *Workspace) OnStatusChange(cb func(*Workspace)) {
@@ -145,17 +155,28 @@ func (w *Workspace) BufferStatus() (int, int64) {
 
 // weird method: resets cmd buffer/pid, sets the menu item status, and returns
 // the pid for Close()
-func (w *Workspace) resetPid(s WorkspaceStatus) int {
-	w.mu.Lock()
+func (w *Workspace) resetPid(s WorkspaceStatus, killFn func(int) error) error {
+	var err error
+	if w.pid != 0 && killFn != nil {
+		err = killFn(w.pid)
+		return nil
+	}
+
 	if w.buf != nil {
 		w.buf.Close()
 		w.buf = nil
 	}
-	pid := w.pid
+
 	w.pid = 0
 	w.setStatus(s)
+	return err
+}
+
+func (w *Workspace) resetPidWithMu(s WorkspaceStatus, killFn func(int) error) error {
+	w.mu.Lock()
+	err := w.resetPid(s, killFn)
 	w.mu.Unlock()
-	return pid
+	return err
 }
 
 // always run when w.mu mutex is locked
