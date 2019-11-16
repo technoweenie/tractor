@@ -12,7 +12,7 @@ import (
 	"github.com/manifold/tractor/pkg/agent/icons"
 )
 
-type WorkplaceStatus int
+type WorkspaceStatus int
 
 const (
 	StatusAvailable = iota
@@ -20,7 +20,7 @@ const (
 	StatusUnavailable
 )
 
-func (s WorkplaceStatus) Icon() []byte {
+func (s WorkspaceStatus) Icon() []byte {
 	switch int(s) {
 	case 0:
 		return icons.Available
@@ -31,7 +31,7 @@ func (s WorkplaceStatus) Icon() []byte {
 	}
 }
 
-func (s WorkplaceStatus) String() string {
+func (s WorkspaceStatus) String() string {
 	switch int(s) {
 	case 0:
 		return "Available"
@@ -46,7 +46,7 @@ type Workspace struct {
 	Name      string // base name of dir (~/.tractor/workspaces/{name})
 	Path      string
 	Socket    string // absolute path to socket file (~/.tractor/sockets/{name}.sock)
-	Status    WorkplaceStatus
+	Status    WorkspaceStatus
 	buf       *Buffer
 	callbacks []func(*Workspace)
 	pid       int
@@ -83,6 +83,7 @@ func (w *Workspace) Connect() (io.ReadCloser, error) {
 // Start starts the workspace daemon. creates the symlink to the path if it does
 // not exist, using the path basename as the symlink name
 func (w *Workspace) Start() (io.ReadCloser, error) {
+	w.Stop()
 	w.mu.Lock()
 	out, err := w.start()
 	w.mu.Unlock()
@@ -113,8 +114,11 @@ func (w *Workspace) start() (io.ReadCloser, error) {
 	w.setStatus(StatusAvailable)
 
 	go func(c *exec.Cmd, ws *Workspace) {
-		c.Wait()
-		ws.unavailable()
+		if err := c.Wait(); err != nil {
+			ws.resetPid(StatusUnavailable)
+			return
+		}
+		ws.resetPid(StatusPartially)
 	}(cmd, w)
 
 	return buf.Pipe(), nil
@@ -122,7 +126,7 @@ func (w *Workspace) start() (io.ReadCloser, error) {
 
 // Stop stops the workspace daemon, deleting the unix socket file.
 func (w *Workspace) Stop() error {
-	if pid := w.unavailable(); pid > 0 {
+	if pid := w.resetPid(StatusPartially); pid > 0 {
 		return syscall.Kill(-pid, syscall.SIGTERM)
 	}
 	return nil
@@ -135,7 +139,9 @@ func (w *Workspace) OnStatusChange(cb func(*Workspace)) {
 	w.mu.Unlock()
 }
 
-func (w *Workspace) unavailable() int {
+// weird method: resets cmd buffer/pid, sets the menu item status, and returns
+// the pid for Close()
+func (w *Workspace) resetPid(s WorkspaceStatus) int {
 	w.mu.Lock()
 	if w.buf != nil {
 		w.buf.Close()
@@ -143,13 +149,13 @@ func (w *Workspace) unavailable() int {
 	}
 	pid := w.pid
 	w.pid = 0
-	w.setStatus(StatusUnavailable)
+	w.setStatus(s)
 	w.mu.Unlock()
 	return pid
 }
 
 // always run when w.mu mutex is locked
-func (w *Workspace) setStatus(s WorkplaceStatus) {
+func (w *Workspace) setStatus(s WorkspaceStatus) {
 	if w.Status == s {
 		return
 	}
