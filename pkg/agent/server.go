@@ -101,21 +101,21 @@ func streamWorkspaceOutput(a *Agent, r qrpc.Responder, fn workspaceFunc) error {
 		return err
 	}
 
-	defer out.Close()
-
 	ch, err := r.Hijack("ok")
 	if err != nil {
+		out.Close()
 		return err
 	}
 
-	if _, err := io.Copy(ch, out); err != nil {
-		ch.Close()
-		if err == io.ErrClosedPipe {
-			return nil
-		}
-		return err
+	_, err = io.Copy(ch, out)
+	ch.Close()
+	out.Close()
+
+	if err == io.ErrClosedPipe {
+		return nil
 	}
-	return ch.Close()
+
+	return err
 }
 
 func findWorkspace(a *Agent, call *qrpc.Call) (*Workspace, error) {

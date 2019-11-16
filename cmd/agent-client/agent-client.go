@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/signal"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -54,7 +55,11 @@ func main() {
 	}
 
 	if resp.Hijacked {
-		if _, err := io.Copy(os.Stdout, resp.Channel); err != nil && err != io.EOF {
+		notifySig(func() { resp.Channel.Close() })
+
+		_, err = io.Copy(os.Stdout, resp.Channel)
+		resp.Channel.Close()
+		if err != nil && err != io.EOF {
 			fmt.Println(err)
 		}
 		fmt.Println()
@@ -63,4 +68,14 @@ func main() {
 	}
 
 	fmt.Printf("qrpc: %s(%q) %s\n", cmd, flag.Arg(1), time.Since(start))
+}
+
+func notifySig(fn func()) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+
+	go func() {
+		<-c
+		fn()
+	}()
 }
