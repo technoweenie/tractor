@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
@@ -159,6 +160,9 @@ func (w *Workspace) resetPid(s WorkspaceStatus, killFn func(int)) {
 		killFn(w.cmd.Process.Pid)
 		w.cmd.Wait()
 	}
+
+	// workplace/init package should clean up its own socket
+	os.RemoveAll(w.Socket)
 
 	if w.buf != nil {
 		w.buf.Close()
