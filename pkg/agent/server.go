@@ -77,6 +77,10 @@ func streamWorkspaceOutput(a *Agent, r qrpc.Responder, fn workspaceFunc) error {
 	}
 
 	if _, err := io.Copy(ch, out); err != nil {
+		if err == io.ErrClosedPipe {
+			return ch.Close()
+		}
+		ch.Close()
 		return err
 	}
 	return ch.Close()
