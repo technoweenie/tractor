@@ -103,16 +103,16 @@ func streamWorkspaceOutput(a *Agent, r qrpc.Responder, fn workspaceFunc) error {
 
 	defer out.Close()
 
-	ch, err := r.Hijack("how am i alive?")
+	ch, err := r.Hijack("ok")
 	if err != nil {
 		return err
 	}
 
 	if _, err := io.Copy(ch, out); err != nil {
-		if err == io.ErrClosedPipe {
-			return ch.Close()
-		}
 		ch.Close()
+		if err == io.ErrClosedPipe {
+			return nil
+		}
 		return err
 	}
 	return ch.Close()

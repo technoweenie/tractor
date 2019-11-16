@@ -54,7 +54,9 @@ func main() {
 	}
 
 	if resp.Hijacked {
-		io.Copy(os.Stdout, resp.Channel)
+		if _, err := io.Copy(os.Stdout, resp.Channel); err != nil && err != io.EOF {
+			fmt.Println(err)
+		}
 		fmt.Println()
 	} else {
 		fmt.Println(msg)
