@@ -52,6 +52,7 @@ func (a *Agent) Workspace(path string) *Workspace {
 }
 
 func (a *Agent) Shutdown() {
+	log.Println("[server] shutting down")
 	for _, ws := range a.workspaces {
 		ws.Stop()
 	}

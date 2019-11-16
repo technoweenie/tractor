@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -26,10 +25,7 @@ func main() {
 		log.Fatal(agent.ListenAndServe(a))
 	}(ag)
 
-	systray.Run(onReady(ag), func() {
-		fmt.Println("Shutting down...")
-		ag.Shutdown()
-	})
+	systray.Run(onReady(ag), ag.Shutdown)
 }
 
 func onReady(ag *agent.Agent) func() {

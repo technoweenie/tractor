@@ -72,7 +72,7 @@ func ListenAndServe(a *Agent) error {
 		return err
 	}
 
-	log.Println("unix server listening at", a.AgentSocket)
+	log.Printf("[server] unix://%s", a.AgentSocket)
 	err = server.Serve(l, api)
 	os.Remove(a.AgentSocket)
 	return err

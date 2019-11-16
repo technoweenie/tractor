@@ -47,10 +47,10 @@ type Workspace struct {
 	Path      string
 	Socket    string // absolute path to socket file (~/.tractor/sockets/{name}.sock)
 	Status    WorkspaceStatus
+	bin       string
 	buf       *Buffer
 	callbacks []func(*Workspace)
-	pid       int
-	bin       string
+	cmd       *exec.Cmd
 	mu        sync.Mutex
 }
 
@@ -87,8 +87,8 @@ func (w *Workspace) Start() (io.ReadCloser, error) {
 	w.mu.Lock()
 	log.Println("[workspace]", w.Name, "Start()")
 
-	w.resetPid(StatusPartially, func(pid int) error {
-		return syscall.Kill(-pid, syscall.SIGTERM)
+	w.resetPid(StatusPartially, func(pid int) {
+		syscall.Kill(-pid, syscall.SIGTERM)
 	})
 
 	out, err := w.start()
@@ -103,43 +103,41 @@ func (w *Workspace) start() (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	cmd := exec.Command(w.bin, "run", "workspace.go",
+	w.cmd = exec.Command(w.bin, "run", "workspace.go",
 		"-proto", "unix", "-addr", w.Socket)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Dir = w.Path
-	cmd.Stdout = buf
-	cmd.Stderr = buf
+	w.cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	w.cmd.Dir = w.Path
+	w.cmd.Stdout = buf
+	w.cmd.Stderr = buf
 
-	if err := cmd.Start(); err != nil {
+	if err := w.cmd.Start(); err != nil {
 		w.setStatus(StatusUnavailable)
 		return nil, err
 	}
 
 	w.buf = buf
-	w.pid = cmd.Process.Pid
 	w.setStatus(StatusAvailable)
 
 	go func(c *exec.Cmd, ws *Workspace) {
 		if err := c.Wait(); err != nil {
-			ws.resetPidWithMu(StatusUnavailable, nil)
+			ws.afterWait(c, StatusUnavailable, nil)
 			return
 		}
-		ws.resetPidWithMu(StatusPartially, nil)
-	}(cmd, w)
+		ws.afterWait(c, StatusPartially, nil)
+	}(w.cmd, w)
 
 	return buf.Pipe(), nil
 }
 
 // Stop stops the workspace daemon, deleting the unix socket file.
-func (w *Workspace) Stop() error {
+func (w *Workspace) Stop() {
 	w.mu.Lock()
 	log.Println("[workspace]", w.Name, "Stop()")
 
-	err := w.resetPid(StatusPartially, func(pid int) error {
-		return syscall.Kill(-pid, syscall.SIGTERM)
+	w.resetPid(StatusPartially, func(pid int) {
+		syscall.Kill(-pid, syscall.SIGTERM)
 	})
 	w.mu.Unlock()
-	return err
 }
 
 func (w *Workspace) OnStatusChange(cb func(*Workspace)) {
@@ -155,11 +153,11 @@ func (w *Workspace) BufferStatus() (int, int64) {
 
 // weird method: resets cmd buffer/pid, sets the menu item status, and returns
 // the pid for Close()
-func (w *Workspace) resetPid(s WorkspaceStatus, killFn func(int) error) error {
-	var err error
-	if w.pid != 0 && killFn != nil {
-		err = killFn(w.pid)
-		return nil
+// must run when the w.mu mutex is locked.
+func (w *Workspace) resetPid(s WorkspaceStatus, killFn func(int)) {
+	if w.cmd != nil && killFn != nil {
+		killFn(w.cmd.Process.Pid)
+		w.cmd.Wait()
 	}
 
 	if w.buf != nil {
@@ -167,16 +165,16 @@ func (w *Workspace) resetPid(s WorkspaceStatus, killFn func(int) error) error {
 		w.buf = nil
 	}
 
-	w.pid = 0
+	w.cmd = nil
 	w.setStatus(s)
-	return err
 }
 
-func (w *Workspace) resetPidWithMu(s WorkspaceStatus, killFn func(int) error) error {
+func (w *Workspace) afterWait(c *exec.Cmd, s WorkspaceStatus, killFn func(int)) {
 	w.mu.Lock()
-	err := w.resetPid(s, killFn)
+	if c == w.cmd {
+		w.resetPid(s, killFn)
+	}
 	w.mu.Unlock()
-	return err
 }
 
 // always run when w.mu mutex is locked
