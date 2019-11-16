@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"sync"
 )
 
 type Agent struct {
@@ -16,6 +17,7 @@ type Agent struct {
 	SocketsPath    string // ~/.tractor/sockets
 	Bin            string
 	workspaces     map[string]*Workspace
+	mu             sync.RWMutex
 }
 
 func Open(path string) (*Agent, error) {
@@ -48,7 +50,10 @@ func Open(path string) (*Agent, error) {
 }
 
 func (a *Agent) Workspace(path string) *Workspace {
-	return a.workspaces[path]
+	a.mu.RLock()
+	ws := a.workspaces[path]
+	a.mu.RUnlock()
+	return ws
 }
 
 func (a *Agent) Shutdown() {
@@ -66,6 +71,7 @@ func (a *Agent) Workspaces() ([]*Workspace, error) {
 	}
 
 	workspaces := make([]*Workspace, 0, len(entries))
+	a.mu.Lock()
 	for _, entry := range entries {
 		if !a.isWorkspace(entry) {
 			continue
@@ -79,6 +85,7 @@ func (a *Agent) Workspaces() ([]*Workspace, error) {
 		}
 		workspaces = append(workspaces, ws)
 	}
+	a.mu.Unlock()
 	return workspaces, nil
 }
 
