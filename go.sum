@@ -54,8 +54,11 @@ github.com/manifold/qtalk v0.0.0-20191022233612-69e545577733 h1:r04BRfvNNzgvNdB5
 github.com/manifold/qtalk v0.0.0-20191022233612-69e545577733/go.mod h1:AaTThxIfS5tnrgHTHOOjIH0oiB7Go4EQ/5DtPUif/Cg=
 github.com/manifold/qtalk v0.0.0-20191117202844-f1ce2a287d67 h1:oh1zrjG6FBsQyMaERmlAlL6KKNnaC45H0GyGaRY8bjc=
 github.com/manifold/qtalk v0.0.0-20191117202844-f1ce2a287d67/go.mod h1:AaTThxIfS5tnrgHTHOOjIH0oiB7Go4EQ/5DtPUif/Cg=
+<<<<<<< 2bc7034a390e855eab69d0b3fc19b653716a6fe3
 github.com/marten-seemann/chacha20 v0.2.0 h1:f40vqzzx+3GdOmzQoItkLX5WLvHgPgyYqFFIO5Gh4hQ=
 github.com/marten-seemann/chacha20 v0.2.0/go.mod h1:HSdjFau7GzYRj+ahFNwsO3ouVJr1HFkWoEwNDb4TMtE=
+=======
+>>>>>>> go.mod: updated qtalk
 github.com/marten-seemann/qpack v0.1.0/go.mod h1:LFt1NU/Ptjip0C2CPkhimBz5CGE3WGDAUWqna+CNTrI=
 github.com/marten-seemann/qtls v0.4.1 h1:YlT8QP3WCCvvok7MGEZkMldXbyqgr8oFg5/n8Gtbkks=
 github.com/marten-seemann/qtls v0.4.1/go.mod h1:pxVXcHHw1pNIt8Qo0pwSYQEoZ8yYOOPXTCZLQQunvRc=
