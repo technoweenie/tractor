@@ -21,9 +21,11 @@ require (
 	github.com/rs/xid v1.2.1
 	github.com/skratchdot/open-golang v0.0.0-20190402232053-79abb63cd66e
 	github.com/spf13/afero v1.2.2
+	github.com/thejerf/suture v3.0.2+incompatible // indirect
 	github.com/urfave/negroni v1.0.0
 	golang.org/x/crypto v0.0.0-20191117063200-497ca9f6d64f // indirect
 	golang.org/x/net v0.0.0-20191118183410-d06c31c94cae // indirect
+	google.golang.org/appengine v1.6.5 // indirect
 	gopkg.in/vmihailenco/msgpack.v2 v2.9.1 // indirect
 )
 
