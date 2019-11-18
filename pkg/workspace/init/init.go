@@ -1,6 +1,7 @@
 package init
 
 import (
+	"flag"
 	"log"
 	"os"
 	"path/filepath"
@@ -17,7 +18,10 @@ import (
 	_ "github.com/manifold/tractor/com/net"
 )
 
-const addr = "localhost:4243"
+var (
+	addr  = flag.String("addr", "localhost:4243", "server listener address")
+	proto = flag.String("proto", "websocket", "server listener protocol")
+)
 
 type PreInitializer interface {
 	PreInitialize()
@@ -28,6 +32,7 @@ type Initializer interface {
 }
 
 func init() {
+	flag.Parse()
 
 	var err error
 	manifold.Root, err = workspace.LoadHierarchy()
@@ -81,5 +86,5 @@ func init() {
 		daemon.Run(registry, "app")
 	}()
 
-	frontend.ListenAndServe(manifold.Root, addr)
+	frontend.ListenAndServe(manifold.Root, *proto, *addr)
 }

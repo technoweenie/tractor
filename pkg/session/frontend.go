@@ -322,7 +322,7 @@ type MoveNodeParams struct {
 	Index int
 }
 
-func ListenAndServe(root *manifold.Node, addr string) error {
+func ListenAndServe(root *manifold.Node, proto, addr string) error {
 	state := State{
 		Projects: []Project{
 			{Name: "project1", Path: "/Project1"},
@@ -608,10 +608,21 @@ func ListenAndServe(root *manifold.Node, addr string) error {
 
 	// start server with api
 	server := &qrpc.Server{}
-	l, err := mux.ListenWebsocket(addr)
+	l, err := muxListenTo(proto, addr)
 	if err != nil {
 		panic(err)
 	}
-	log.Println("websocket server listening at", addr)
+	log.Println(proto, "server listening at", addr)
 	return server.Serve(l, api)
+}
+
+func muxListenTo(proto, addr string) (mux.Listener, error) {
+	switch proto {
+	case "websocket":
+		return mux.ListenWebsocket(addr)
+	case "unix":
+		return mux.ListenUnix(addr)
+	}
+
+	return nil, fmt.Errorf("cannot connect to %s, unknown protocol %q", addr, proto)
 }
