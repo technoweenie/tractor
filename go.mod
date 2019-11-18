@@ -18,12 +18,12 @@ require (
 	github.com/manifold/qtalk v0.0.0-20191117202844-f1ce2a287d67
 	github.com/mitchellh/hashstructure v1.0.0
 	github.com/mitchellh/mapstructure v1.1.2
+	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/progrium/prototypes v0.0.0-20190807232325-d9b2b4ba3a4f
 	github.com/rjeczalik/notify v0.9.2
 	github.com/rs/xid v1.2.1
 	github.com/skratchdot/open-golang v0.0.0-20190402232053-79abb63cd66e
 	github.com/spf13/afero v1.2.2
-	github.com/spf13/viper v1.5.0 // indirect
 	github.com/thejerf/suture v3.0.2+incompatible // indirect
 	github.com/urfave/negroni v1.0.0
 	golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550 // indirect
