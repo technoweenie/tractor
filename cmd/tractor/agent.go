@@ -154,9 +154,3 @@ func agentCallSocket() string {
 	}
 	return filepath.Join(usr.HomeDir, ".tractor", "agent.sock")
 }
-
-func fatal(err error) {
-	if err != nil {
-		log.Fatal(err)
-	}
-}
