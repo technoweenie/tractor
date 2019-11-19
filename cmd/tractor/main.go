@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 
-	"github.com/manifold/tractor/pkg/workspace/daemon"
 	"github.com/spf13/cobra"
 )
 
@@ -12,7 +11,7 @@ var rootCmd = &cobra.Command{
 	Short: "Tractor",
 	Long:  "Tractor",
 	Run: func(cmd *cobra.Command, args []string) {
-		daemon.Run()
+		cmd.Help()
 	},
 }
 
@@ -20,4 +19,8 @@ func main() {
 	if err := rootCmd.Execute(); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func init() {
+	rootCmd.AddCommand(runCmd)
 }
