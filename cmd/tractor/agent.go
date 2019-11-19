@@ -3,10 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
-	"os/user"
-	"path/filepath"
 	"time"
 
 	"github.com/getlantern/systray"
@@ -18,6 +15,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	tractorUserPath string
+)
+
 func agentCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "agent",
@@ -26,12 +27,18 @@ func agentCmd() *cobra.Command {
 		Run:   runAgent,
 	}
 	cmd.AddCommand(agentCallCmd())
+	cmd.PersistentFlags().StringVarP(&tractorUserPath, "path", "p", "", "path to the user tractor directory (default is ~/.tractor)")
 	return cmd
 }
 
-func runAgent(cmd *cobra.Command, args []string) {
-	ag, err := agent.Open("")
+func openAgent() *agent.Agent {
+	ag, err := agent.Open(tractorUserPath)
 	fatal(err)
+	return ag
+}
+
+func runAgent(cmd *cobra.Command, args []string) {
+	ag := openAgent()
 
 	go func(a *agent.Agent) {
 		fatal(agent.ListenAndServe(a))
@@ -118,7 +125,8 @@ func runAgentCall(callmethod string) func(cmd *cobra.Command, args []string) {
 }
 
 func agentQRPCCall(w io.Writer, cmd, wspath string) (string, error) {
-	sess, err := mux.DialUnix(agentCallSocket())
+	ag := openAgent()
+	sess, err := mux.DialUnix(ag.AgentSocket)
 	if err != nil {
 		return "", err
 	}
@@ -145,12 +153,4 @@ func agentQRPCCall(w io.Writer, cmd, wspath string) (string, error) {
 	}
 
 	return msg, nil
-}
-
-func agentCallSocket() string {
-	usr, err := user.Current()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return filepath.Join(usr.HomeDir, ".tractor", "agent.sock")
 }
