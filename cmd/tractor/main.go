@@ -22,5 +22,6 @@ func main() {
 }
 
 func init() {
+	rootCmd.AddCommand(agentCmd)
 	rootCmd.AddCommand(runCmd)
 }
