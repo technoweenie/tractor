@@ -5,7 +5,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"os/signal"
 	"os/user"
 	"path/filepath"
 	"time"
@@ -74,7 +73,8 @@ func buildSystray(ag *agent.Agent) {
 		systray.Quit()
 	}(mQuitOrig)
 
-	notifySig()
+	<-sigQuit.Done()
+	systray.Quit()
 }
 
 func agentCallCmd() *cobra.Command {
@@ -131,7 +131,11 @@ func agentQRPCCall(w io.Writer, cmd, wspath string) (string, error) {
 	}
 
 	if resp.Hijacked {
-		agentCallSig(func() { resp.Channel.Close() })
+		go func() {
+			<-sigQuit.Done()
+			resp.Channel.Close()
+		}()
+
 		_, err = io.Copy(w, resp.Channel)
 		resp.Channel.Close()
 		if err != nil && err != io.EOF {
@@ -149,26 +153,6 @@ func agentCallSocket() string {
 		log.Fatal(err)
 	}
 	return filepath.Join(usr.HomeDir, ".tractor", "agent.sock")
-}
-
-func agentCallSig(fn func()) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-
-	go func() {
-		<-c
-		fn()
-	}()
-}
-
-func notifySig() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-
-	go func() {
-		<-c
-		systray.Quit()
-	}()
 }
 
 func fatal(err error) {
