@@ -10,6 +10,7 @@ require (
 	github.com/gliderlabs/com v0.1.1-0.20191023181249-02615ad445ac
 	github.com/gliderlabs/stdcom v0.0.0-20171109193247-64a0d4e5fd86
 	github.com/goji/httpauth v0.0.0-20160601135302-2da839ab0f4d
+	github.com/hashicorp/yamux v0.0.0-20190923154419-df201c70410d // indirect
 	github.com/inconshreveable/muxado v0.0.0-20160802230925-fc182d90f26e // indirect
 	github.com/lucas-clemente/quic-go v0.13.1 // indirect
 	github.com/manifold/qtalk v0.0.0-20191117202844-f1ce2a287d67
@@ -21,6 +22,7 @@ require (
 	github.com/rs/xid v1.2.1
 	github.com/skratchdot/open-golang v0.0.0-20190402232053-79abb63cd66e
 	github.com/spf13/afero v1.2.2
+	github.com/spf13/cobra v0.0.5
 	github.com/thejerf/suture v3.0.2+incompatible // indirect
 	github.com/urfave/negroni v1.0.0
 	golang.org/x/crypto v0.0.0-20191117063200-497ca9f6d64f // indirect
