@@ -53,7 +53,18 @@ func (a *Agent) Workspace(path string) *Workspace {
 	a.mu.RLock()
 	ws := a.workspaces[path]
 	a.mu.RUnlock()
-	return ws
+	if ws != nil {
+		return ws
+	}
+
+	wss, _ := a.Workspaces()
+	for _, ws := range wss {
+		if ws.Name == path {
+			return ws
+		}
+	}
+
+	return nil
 }
 
 func (a *Agent) Shutdown() {

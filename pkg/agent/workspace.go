@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -52,6 +53,7 @@ type Workspace struct {
 	buf       *Buffer
 	callbacks []func(*Workspace)
 	cmd       *exec.Cmd
+	cancel    context.CancelFunc
 	mu        sync.Mutex
 }
 
@@ -88,9 +90,7 @@ func (w *Workspace) Start() (io.ReadCloser, error) {
 	w.mu.Lock()
 	log.Println("[workspace]", w.Name, "Start()")
 
-	w.resetPid(StatusPartially, func(pid int) {
-		syscall.Kill(-pid, syscall.SIGTERM)
-	})
+	w.resetPid(StatusPartially)
 
 	out, err := w.start()
 	w.mu.Unlock()
@@ -104,12 +104,14 @@ func (w *Workspace) start() (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	w.cmd = exec.Command(w.bin, "run", "workspace.go",
+	ctx, cancel := context.WithCancel(context.Background())
+	w.cmd = exec.CommandContext(ctx, w.bin, "run", "workspace.go",
 		"-proto", "unix", "-addr", w.Socket)
 	w.cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	w.cmd.Dir = w.Path
 	w.cmd.Stdout = buf
 	w.cmd.Stderr = buf
+	w.cancel = cancel
 
 	if err := w.cmd.Start(); err != nil {
 		w.setStatus(StatusUnavailable)
@@ -121,10 +123,10 @@ func (w *Workspace) start() (io.ReadCloser, error) {
 
 	go func(c *exec.Cmd, ws *Workspace) {
 		if err := c.Wait(); err != nil {
-			ws.afterWait(c, StatusUnavailable, nil)
+			ws.afterWait(c, StatusUnavailable)
 			return
 		}
-		ws.afterWait(c, StatusPartially, nil)
+		ws.afterWait(c, StatusPartially)
 	}(w.cmd, w)
 
 	return buf.Pipe(), nil
@@ -134,10 +136,7 @@ func (w *Workspace) start() (io.ReadCloser, error) {
 func (w *Workspace) Stop() {
 	w.mu.Lock()
 	log.Println("[workspace]", w.Name, "Stop()")
-
-	w.resetPid(StatusPartially, func(pid int) {
-		syscall.Kill(-pid, syscall.SIGTERM)
-	})
+	w.resetPid(StatusPartially)
 	w.mu.Unlock()
 }
 
@@ -155,11 +154,16 @@ func (w *Workspace) BufferStatus() (int, int64) {
 // weird method: resets cmd buffer/pid, sets the menu item status, and returns
 // the pid for Close()
 // must run when the w.mu mutex is locked.
-func (w *Workspace) resetPid(s WorkspaceStatus, killFn func(int)) {
-	if w.cmd != nil && killFn != nil {
-		killFn(w.cmd.Process.Pid)
+func (w *Workspace) resetPid(s WorkspaceStatus) {
+	if w.cancel != nil {
+		w.cancel()
+	}
+	w.cancel = nil
+
+	if w.cmd != nil {
 		w.cmd.Wait()
 	}
+	w.cmd = nil
 
 	// workplace/init package should clean up its own socket
 	os.RemoveAll(w.Socket)
@@ -169,14 +173,13 @@ func (w *Workspace) resetPid(s WorkspaceStatus, killFn func(int)) {
 		w.buf = nil
 	}
 
-	w.cmd = nil
 	w.setStatus(s)
 }
 
-func (w *Workspace) afterWait(c *exec.Cmd, s WorkspaceStatus, killFn func(int)) {
+func (w *Workspace) afterWait(c *exec.Cmd, s WorkspaceStatus) {
 	w.mu.Lock()
 	if c == w.cmd {
-		w.resetPid(s, killFn)
+		w.resetPid(s)
 	}
 	w.mu.Unlock()
 }
