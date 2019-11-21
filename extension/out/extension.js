@@ -78,7 +78,7 @@ function activate(context) {
     vscode.commands.registerCommand('treeExplorer.moveNodeDown', (node) => {
         tree.moveNode(node.id, node.index + 1);
     });
-    serverTask = vscode.tasks.executeTask(new vscode.Task({ type: 'server', task: 'server' }, "server", "tractor", new vscode.ShellExecution("tractor run")));
+    serverTask = vscode.tasks.executeTask(new vscode.Task({ type: 'server', task: 'server' }, "server", "tractor", new vscode.ShellExecution(`${path.join(context.extensionPath, '../dev/bin/tractor')} run`)));
     // setTimeout(() => {
     // 	let repl = vscode.window.createTerminal("repl", path.join(context.extensionPath, '../repl.js'));
     // 	repl.show();
