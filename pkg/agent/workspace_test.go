@@ -12,11 +12,11 @@ import (
 )
 
 func TestWorkspace(t *testing.T) {
-	ag, teardown := setup(t)
+	ag, teardown := setup(t, "test1", "test2", "test3")
 	defer teardown()
 
 	t.Run("start/stop", func(t *testing.T) {
-		ws := ag.Workspace("test")
+		ws := ag.Workspace("test1")
 		require.NotNil(t, ws)
 		assert.Equal(t, int(StatusPartially), int(ws.Status))
 
@@ -32,7 +32,7 @@ func TestWorkspace(t *testing.T) {
 	})
 
 	t.Run("start/connect/stop", func(t *testing.T) {
-		ws := ag.Workspace("test")
+		ws := ag.Workspace("test2")
 		require.NotNil(t, ws)
 		assert.Equal(t, int(StatusPartially), int(ws.Status))
 
@@ -55,7 +55,7 @@ func TestWorkspace(t *testing.T) {
 	})
 
 	t.Run("connect/start/stop", func(t *testing.T) {
-		ws := ag.Workspace("test")
+		ws := ag.Workspace("test3")
 		require.NotNil(t, ws)
 		assert.Equal(t, int(StatusPartially), int(ws.Status))
 
@@ -76,6 +76,19 @@ func TestWorkspace(t *testing.T) {
 		connOut := strings.TrimSpace(string(<-connCh))
 		assert.True(t, strings.HasPrefix(connOut, "pid "))
 		assert.NotEqual(t, startOut, connOut)
+	})
+
+	t.Run("erroring workspace", func(t *testing.T) {
+		ws := ag.Workspace("err")
+		require.NotNil(t, ws)
+		assert.Equal(t, int(StatusPartially), int(ws.Status))
+
+		startCh := readWorkspace(t, ws.Start)
+		time.Sleep(time.Second)
+		assert.Equal(t, int(StatusUnavailable), int(ws.Status))
+
+		startOut := strings.TrimSpace(string(<-startCh))
+		assert.True(t, strings.HasPrefix(startOut, "boomtown "))
 	})
 }
 

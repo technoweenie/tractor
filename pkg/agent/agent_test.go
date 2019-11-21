@@ -34,9 +34,11 @@ func TestAgent(t *testing.T) {
 	t.Run("finds workspaces", func(t *testing.T) {
 		wss, err := ag.Workspaces()
 		assert.Nil(t, err)
-		require.Equal(t, 1, len(wss))
-		assert.Equal(t, "test", wss[0].Name)
-		assert.Equal(t, filepath.Join(ag.WorkspacesPath, "test"), wss[0].Path)
+		require.Equal(t, 2, len(wss))
+		assert.Equal(t, "err", wss[0].Name)
+		assert.Equal(t, filepath.Join(ag.WorkspacesPath, "err"), wss[0].Path)
+		assert.Equal(t, "test", wss[1].Name)
+		assert.Equal(t, filepath.Join(ag.WorkspacesPath, "test"), wss[1].Path)
 	})
 
 	t.Run("finds existing workspace", func(t *testing.T) {
@@ -48,14 +50,20 @@ func TestAgent(t *testing.T) {
 	})
 }
 
-func setup(t *testing.T) (*Agent, func()) {
+func setup(t *testing.T, extradirs ...string) (*Agent, func()) {
+	// use tempdir in place of ~/.tractor
 	dirname, err := ioutil.TempDir("", "tractor-pkg-agent-"+t.Name())
 	assert.Nil(t, err)
 
 	ag := newAgent(t, dirname)
-	wspath := filepath.Join(ag.WorkspacesPath, "test")
-	err = os.Symlink(filepath.Join(pkgpath, "testworkspace"), wspath)
+	err = os.Symlink(filepath.Join(pkgpath, "errworkspace"), filepath.Join(ag.WorkspacesPath, "err"))
 	assert.Nil(t, err)
+
+	wspath := filepath.Join(pkgpath, "testworkspace")
+	for _, n := range append(extradirs, "test") {
+		err = os.Symlink(wspath, filepath.Join(ag.WorkspacesPath, n))
+		assert.Nil(t, err)
+	}
 
 	return ag, func() {
 		ag.Shutdown()
